@@ -1,0 +1,27 @@
+#include "irc.hpp"
+#include <iostream>
+#include <unistd.h>
+
+Client::Client(int fd_) : fd(fd_), authenticated(false) {}
+
+Client::~Client() {}
+
+int Client::recv_data() {
+	char buf[512];
+	int ret = read(fd, buf, sizeof(buf));
+	if (ret > 0)
+		buffer.append(buf, ret);
+	return ret;
+}
+
+void Client::send_data(const std::string &msg) {
+	write(fd, msg.c_str(), msg.size());
+}
+
+void Client::join_channel(Channel *ch) {
+	channels.push_back(ch);
+}
+
+void Client::leave_channel(Channel *ch) {
+	// remove from vector
+}

@@ -3,7 +3,10 @@
 #include <arpa/inet.h>
 #include <cstring>
 
+#include "Server.hpp"
+
 #define MAX_CLIENTS 1024
+
 
 Server::Server(int port, const std::string &pwd) : password(pwd) {
 	listen_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -31,7 +34,7 @@ Server::~Server() {
 	close(listen_fd);
 }
 
-Channel* Server::find_or_create_channel(const std::string &name) {
+Channel* Server::find_channel(const std::string &name) {
 	for (Channel *ch : channels) {
 		if (ch->name == name)
 			return ch;
@@ -39,6 +42,87 @@ Channel* Server::find_or_create_channel(const std::string &name) {
 	Channel *newCh = new Channel(name);
 	channels.push_back(newCh);
 	return newCh;
+}
+
+void Server::command_NICK(Client *c, std::string nickname){
+	if (nickname.empty()) {
+		numeric_431(c);
+		return;
+	}
+	bool taken = false;
+	for (size_t i = 0; i < clients.size(); ++i) {
+		if (clients[i]->nick == nickname) {
+			taken = true;
+			break;
+		}
+	}
+	if (taken) {
+		numeric_433(c, nickname);
+		return;
+	}
+	c->nick = nickname;
+	numeric_001(c);
+}
+
+void Server::command_JOIN(Client *c, std::string channel_name){
+	if (channel_name.empty()) {
+			c->send_data("ERROR :No channel name given\r\n");
+			return;
+		}
+		Channel* ch = find_channel(channel_name);
+		ch->add_client(c);
+		c->channels.push_back(ch);
+
+		std::string join_msg = ":" + c->nick + " JOIN :" + channel_name + "\r\n";
+		ch->broadcast(c, join_msg);
+}
+
+void Server::handleBuffer(Client* c) {
+	size_t pos;
+
+	while ((pos = c->buffer.find("\r\n")) != std::string::npos) {
+		std::string line = c->buffer.substr(0, pos);
+		c->buffer.erase(0, pos + 2);
+
+		if (line.empty())
+			continue;
+
+		handleCommand(c, line);
+	}
+}
+
+void Server::handleCommand(Client* c,std::string& line)
+{
+	std::istringstream iss(line);
+	std::string cmd;
+	iss >> cmd;
+
+	std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::toupper);
+
+	if (cmd == "NICK"){
+		std::string nickname;
+		iss >> nickname;
+		command_NICK(c, nickname);
+	}
+	else if (cmd == "USER") {
+		std::string username, unused, mode, realname;
+		iss >> username >> unused >> mode;
+		std::getline(iss, realname);
+		if (!realname.empty() && realname[0] == ' ')
+			realname.erase(0, 1);
+
+		c->user = username;
+		c->authenticated = true;
+		c->send_data("USER command accepted\r\n");
+	}
+	else if (cmd == "JOIN") {
+		std::string channel_name;
+		iss >> channel_name;
+		command_JOIN(c, channel_name);
+	}
+	else {
+		send_numeric(c, "ft_irc", 421, c->nick, "Unknown command");
+	}
 }
 
 void Server::run() {
@@ -96,18 +180,15 @@ void Server::run() {
 					for (int j = i; j < nfds - 1; j++)
 						fds[j] = fds[j + 1];
 					nfds--;
-					
-					clients.erase(std::find(clients.begin(), clients.end(), c));
+					std::vector<Client*>::iterator it = std::find(clients.begin(), clients.end(), c);
+					if (it != clients.end())
+						clients.erase(it);
 					delete c;
 					i--;
 					continue;
 				}
-				 else {
-					c->buffer.append(buf, bytes);
-
-					// TODO : parser les lignes complètes terminées par \r\n
-					// et exécuter commandes IRC (NICK, USER, JOIN, PRIVMSG...)
-				}
+				else
+					handleBuffer(c);
 			}
 		}
 	}

@@ -14,9 +14,11 @@ int Client::recv_data() {
 	return ret;
 }
 
-void Client::queu_send(const std::string &msg) {
+void Client::queue_send(const std::string &msg, struct pollfd *fds, int index) {
 	send_buffer += msg;
+	fds[index].events |= POLLOUT;
 }
+
 
 void Client::join_channel(Channel *ch) {
 	channels.push_back(ch);

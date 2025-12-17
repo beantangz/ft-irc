@@ -19,7 +19,7 @@ public:
 
 	int recv_data();
 
-	void queu_send(const std::string &msg);
+	void queue_send(const std::string &msg, struct pollfd *fds, int index);
 	void join_channel(Channel *ch);
 	void leave_channel(Channel *ch);
 };

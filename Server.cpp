@@ -63,9 +63,9 @@ void Server::command_NICK(Client *c, std::string nickname){
 	numeric_001(c);
 }
 
-void Server::command_JOIN(Client *c, std::string channel_name){
+void Server::command_JOIN(Client *c, std::string channel_name, int index, struct pollfd *fds){
 	if (channel_name.empty()) {
-			c->queu_send("ERROR :No channel name given\r\n");
+			c->queue_send("ERROR :No channel name given\r\n", fds, index);
 			return;
 		}
 		Channel* ch = find_channel(channel_name);
@@ -76,7 +76,7 @@ void Server::command_JOIN(Client *c, std::string channel_name){
 		ch->broadcast(c, join_msg);
 }
 
-void Server::handleBuffer(Client* c) {
+void Server::handleBuffer(Client* c, int index, struct pollfd *fds) {
 	size_t pos;
 
 	while ((pos = c->recv_buffer.find("\r\n")) != std::string::npos) {
@@ -86,11 +86,11 @@ void Server::handleBuffer(Client* c) {
 		if (line.empty())
 			continue;
 
-		handleCommand(c, line);
+		handleCommand(c, line, index, fds);
 	}
 }
 
-void Server::handleCommand(Client* c,std::string& line)
+void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd *fds)
 {
 	std::istringstream iss(line);
 	std::string cmd;
@@ -112,12 +112,12 @@ void Server::handleCommand(Client* c,std::string& line)
 
 		c->user = username;
 		c->authenticated = true;
-		c->queu_send("USER command accepted\r\n");
+		c->queue_send("USER command accepted\r\n", fds, index);
 	}
 	else if (cmd == "JOIN") {
 		std::string channel_name;
 		iss >> channel_name;
-		command_JOIN(c, channel_name);
+		command_JOIN(c, channel_name,index, fds);
 	}
 	else {
 		send_numeric(c, "ft_irc", 421, c->nick, "Unknown command");
@@ -196,7 +196,7 @@ void Server::tchek_clients(int &nfds, struct pollfd *fds){
 				i--;
 			}
 			else
-				handleBuffer(c);
+				handleBuffer(c, i, fds);
 			}
 		}
 }
@@ -244,6 +244,8 @@ void Server::run() {
 		tchek_listen(nfds, fds);
 
 		tchek_clients(nfds, fds);
+
+		tchek_clients_out(nfds, fds);
 
 		for (int i = 0; i < nfds; ++i) {
 			fds[i].revents = 0;

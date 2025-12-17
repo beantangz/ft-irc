@@ -17,7 +17,7 @@ void Channel::remove_client(Client *c) {
 void Channel::broadcast(Client *from, const std::string &msg) {
 	for (Client *c : clients) {
 		if (c != from)
-			c->send_data(msg);
+			c->queu_send(msg);
 	}
 }
 

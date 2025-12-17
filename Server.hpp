@@ -21,8 +21,8 @@ public:
 
 	void run();
 
-	void handleBuffer(Client *c);
-	void handleCommand(Client *c, std::string& line);
+	void handleBuffer(Client *c, int index, struct pollfd *fds);
+	void handleCommand(Client *c, std::string& line, int index, struct pollfd *fds);
 
 	Client* find_client_by_fd(int fd);
 	void remove_client(int index, int &nfds, struct pollfd *fds);
@@ -34,5 +34,5 @@ public:
 
 	//commmands
 	void command_NICK(Client *c, std::string nickname);
-	void command_JOIN(Client *c, std::string channel_name);
+	void command_JOIN(Client *c, std::string channel_name, int index, struct pollfd *fds);
 };

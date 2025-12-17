@@ -65,7 +65,7 @@ void Server::command_NICK(Client *c, std::string nickname){
 
 void Server::command_JOIN(Client *c, std::string channel_name){
 	if (channel_name.empty()) {
-			c->send_data("ERROR :No channel name given\r\n");
+			c->queu_send("ERROR :No channel name given\r\n");
 			return;
 		}
 		Channel* ch = find_channel(channel_name);
@@ -112,7 +112,7 @@ void Server::handleCommand(Client* c,std::string& line)
 
 		c->user = username;
 		c->authenticated = true;
-		c->send_data("USER command accepted\r\n");
+		c->queu_send("USER command accepted\r\n");
 	}
 	else if (cmd == "JOIN") {
 		std::string channel_name;
@@ -201,6 +201,32 @@ void Server::tchek_clients(int &nfds, struct pollfd *fds){
 		}
 }
 
+void Server::tchek_clients_out(int nfds, struct pollfd *fds) {
+	for (int i = 1; i < nfds; ++i) {
+		Client *c = find_client_by_fd(fds[i].fd);
+		if (!c)
+			continue;
+
+		if ((fds[i].revents & POLLOUT) && !c->send_buffer.empty()) {
+			int sent = send(c->fd, c->send_buffer.c_str(), c->send_buffer.size(), 0);
+
+			if (sent > 0) {
+				c->send_buffer.erase(0, sent);
+			}
+			else if (sent == -1 && (errno != EAGAIN && errno != EWOULDBLOCK)) {
+				std::cerr << "Erreur d'envoi au client fd=" << c->fd << std::endl;
+				remove_client(i, nfds, fds);
+				i--;
+				continue;
+			}
+
+			if (c->send_buffer.empty()) {
+				fds[i].events &= ~POLLOUT;
+			}
+		}
+	}
+}
+
 void Server::run() {
 	struct pollfd fds[MAX_CLIENTS];
 	int nfds = 1;
@@ -218,6 +244,7 @@ void Server::run() {
 		tchek_listen(nfds, fds);
 
 		tchek_clients(nfds, fds);
+
 		for (int i = 0; i < nfds; ++i) {
 			fds[i].revents = 0;
 		}

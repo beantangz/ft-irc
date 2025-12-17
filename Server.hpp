@@ -17,6 +17,7 @@ public:
 
 	void	tchek_listen(int &nfds, struct pollfd *fds);
 	void	tchek_clients(int &nfds, struct pollfd *fds);
+	void tchek_clients_out(int nfds, struct pollfd *fds);
 
 	void run();
 

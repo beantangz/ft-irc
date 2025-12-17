@@ -10,6 +10,7 @@ public:
 
 	std::string		recv_buffer;
 	std::string		send_buffer;
+
 	std::vector<Channel*> channels;
 	bool				authenticated;
 
@@ -18,7 +19,7 @@ public:
 
 	int recv_data();
 
-	void send_data(const std::string &msg);
+	void queu_send(const std::string &msg);
 	void join_channel(Channel *ch);
 	void leave_channel(Channel *ch);
 };

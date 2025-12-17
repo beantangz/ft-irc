@@ -161,7 +161,8 @@ Client* Server::find_client_by_fd(int fd) {
 }
 
 void Server::remove_client(int index, int &nfds, struct pollfd *fds) {
-	Client *c = clients[index-1];
+	Client *c = find_client_by_fd(fds[index].fd);
+	if (!c) return;
 
 	std::cout << "Client déconnecté: fd=" << c->fd << std::endl;
 	close(c->fd);

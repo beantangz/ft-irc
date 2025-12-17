@@ -14,8 +14,8 @@ int Client::recv_data() {
 	return ret;
 }
 
-void Client::send_data(const std::string &msg) {
-	write(fd, msg.c_str(), msg.size());
+void Client::queu_send(const std::string &msg) {
+	send_buffer += msg;
 }
 
 void Client::join_channel(Channel *ch) {

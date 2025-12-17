@@ -9,7 +9,7 @@ void send_numeric(Client* c, const std::string& server_name, int code,
 		<< target << " :"
 		<< message << "\r\n";
 
-	c->send_data(oss.str());
+	c->queu_send(oss.str());
 }
 
 void numeric_431(Client* c) {

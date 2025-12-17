@@ -90,6 +90,8 @@ void Server::handleBuffer(Client* c, int index, struct pollfd *fds) {
 	}
 }
 
+
+
 void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd *fds)
 {
 	std::istringstream iss(line);
@@ -118,6 +120,17 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 		std::string channel_name;
 		iss >> channel_name;
 		command_JOIN(c, channel_name,index, fds);
+	}
+	else if (cmd == "MODE")
+	{
+		std::string target;
+		std::string modes;
+		std::string param;
+
+		iss >> target >> modes;
+		if (!iss.eof())
+			iss >> param;
+		command_MODE(c, target, modes, param, index, fds);
 	}
 	else {
 		send_numeric(c, "ft_irc", 421, c->nick, "Unknown command");
@@ -226,6 +239,8 @@ void Server::tchek_clients_out(int nfds, struct pollfd *fds) {
 		}
 	}
 }
+
+
 
 void Server::run() {
 	struct pollfd fds[MAX_CLIENTS];

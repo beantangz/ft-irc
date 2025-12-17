@@ -33,6 +33,7 @@ public:
 	Channel* find_channel(const std::string &name);
 
 	//commmands
+	void command_MODE(Client *c, std::string target, std::string mode, std::string param, int index, struct pollfd *fds);
 	void command_NICK(Client *c, std::string nickname);
 	void command_JOIN(Client *c, std::string channel_name, int index, struct pollfd *fds);
 };

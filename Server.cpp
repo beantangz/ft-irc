@@ -7,7 +7,6 @@
 
 #define MAX_CLIENTS 1024
 
-
 Server::Server(int port, const std::string &pwd) : password(pwd) {
 	listen_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (listen_fd < 0) { perror("socket"); exit(1); }
@@ -80,9 +79,9 @@ void Server::command_JOIN(Client *c, std::string channel_name){
 void Server::handleBuffer(Client* c) {
 	size_t pos;
 
-	while ((pos = c->buffer.find("\r\n")) != std::string::npos) {
-		std::string line = c->buffer.substr(0, pos);
-		c->buffer.erase(0, pos + 2);
+	while ((pos = c->recv_buffer.find("\r\n")) != std::string::npos) {
+		std::string line = c->recv_buffer.substr(0, pos);
+		c->recv_buffer.erase(0, pos + 2);
 
 		if (line.empty())
 			continue;
@@ -125,6 +124,82 @@ void Server::handleCommand(Client* c,std::string& line)
 	}
 }
 
+void Server::tchek_listen(int &nfds, struct pollfd *fds){
+
+	if (fds[0].revents & POLLIN) {
+			sockaddr_in client_addr;
+			socklen_t addrlen = sizeof(client_addr);
+			int client_fd = accept(fds[0].fd, (struct sockaddr*)&client_addr, &addrlen);
+			if (client_fd < 0) {
+				perror("accept");
+				return;
+			}
+			if (nfds >= MAX_CLIENTS) {
+				close(client_fd);
+				return;
+			}
+			else {
+				std::cout << "Nouveau client connecté: fd=" << client_fd << std::endl;
+
+				Client *c = new Client(client_fd);
+				clients.push_back(c);
+
+				fds[nfds].fd = client_fd;
+				fds[nfds].events = POLLIN;
+				fds[nfds].revents = 0;
+				nfds++;
+			}
+		}
+}
+
+Client* Server::find_client_by_fd(int fd) {
+	for (size_t i = 0; i < clients.size(); ++i) {
+		if (clients[i]->fd == fd)
+			return clients[i];
+	}
+	return nullptr;
+}
+
+void Server::remove_client(int index, int &nfds, struct pollfd *fds) {
+	Client *c = clients[index-1];
+
+	std::cout << "Client déconnecté: fd=" << c->fd << std::endl;
+	close(c->fd);
+
+	std::vector<Client*>::iterator it = std::find(clients.begin(), clients.end(), c);
+	if (it != clients.end())
+		clients.erase(it);
+
+	delete c;
+
+	for (int j = index; j < nfds - 1; j++)
+		fds[j] = fds[j + 1];
+
+	nfds--;
+}
+
+void Server::tchek_clients(int &nfds, struct pollfd *fds){
+	for (int i = 1; i < nfds; i++) {
+		if (fds[i].revents & (POLLHUP | POLLERR)) {
+			remove_client(i, nfds, fds);
+			i--;
+			continue;
+			}
+		if (fds[i].revents & POLLIN) {
+			Client *c = find_client_by_fd(fds[i].fd);
+			if (!c) continue;
+			int bytes = c->recv_data();
+			if (bytes <= 0) 
+			{
+				remove_client(i, nfds, fds);
+				i--;
+			}
+			else
+				handleBuffer(c);
+			}
+		}
+}
+
 void Server::run() {
 	struct pollfd fds[MAX_CLIENTS];
 	int nfds = 1;
@@ -139,57 +214,11 @@ void Server::run() {
 			break;
 		}
 
-		if (fds[0].revents & POLLIN) {
-			sockaddr_in client_addr;
-			socklen_t addrlen = sizeof(client_addr);
-			int client_fd = accept(listen_fd, (struct sockaddr*)&client_addr, &addrlen);
-			if (client_fd < 0) {
-				perror("accept");
-			} else {
-				std::cout << "Nouveau client connecté: fd=" << client_fd << std::endl;
+		tchek_listen(nfds, fds);
 
-				Client *c = new Client(client_fd);
-				clients.push_back(c);
-
-				fds[nfds].fd = client_fd;
-				fds[nfds].events = POLLIN;
-				nfds++;
-			}
-		}
-
-		//verif clients existant
-		for (int i = 1; i < nfds; i++) {
-			if (fds[i].revents & POLLIN) {
-				Client *c = nullptr;
-
-				for (auto client : clients) {
-					if (client->fd == fds[i].fd) {
-						c = client;
-						break;
-					}
-				}
-				if (!c) continue;
-
-				char buf[512];
-				int bytes = c->recv_data();
-
-				if (bytes <= 0) 
-				{
-					std::cout << "Client déconnecté: fd=" << c->fd << std::endl;
-					close(c->fd);
-					for (int j = i; j < nfds - 1; j++)
-						fds[j] = fds[j + 1];
-					nfds--;
-					std::vector<Client*>::iterator it = std::find(clients.begin(), clients.end(), c);
-					if (it != clients.end())
-						clients.erase(it);
-					delete c;
-					i--;
-					continue;
-				}
-				else
-					handleBuffer(c);
-			}
+		tchek_clients(nfds, fds);
+		for (int i = 0; i < nfds; ++i) {
+			fds[i].revents = 0;
 		}
 	}
 }

@@ -5,6 +5,8 @@ Channel::Channel(const std::string &name_) : name(name_) {}
 Channel::~Channel() {}
 
 void Channel::add_client(Client *c) {
+	if (clients.empty())
+		modo = c;
 	clients.push_back(c);
 }
 

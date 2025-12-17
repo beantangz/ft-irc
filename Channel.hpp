@@ -5,7 +5,8 @@
 class Channel {
 
 public:
-	std::string		 name;
+	std::string			name;
+	Client*				modo;
 	std::vector<Client*> clients;
 
 	Channel(const std::string &name_);

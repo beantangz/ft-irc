@@ -2,6 +2,8 @@
 
 #include "irc.hpp"
 
+#define MAX_CLIENTS 1024
+
 class Server {
 public:
 	int					 listen_fd;
@@ -9,13 +11,22 @@ public:
 	std::vector<Channel*>   channels;
 	std::string			 password;
 
-	Server(int port, const std::string &password = ""); //pourquoi??
+	Server(int port, const std::string &password = "");
 	~Server();
 
-	void init_socket();
+
+	void	tchek_listen(int &nfds, struct pollfd *fds);
+	void	tchek_clients(int &nfds, struct pollfd *fds);
+
 	void run();
+
 	void handleBuffer(Client *c);
 	void handleCommand(Client *c, std::string& line);
+
+	Client* find_client_by_fd(int fd);
+	void remove_client(int index, int &nfds, struct pollfd *fds);
+
+
 	void accept_new_client();
 	void handle_client(Client *c);
 	Channel* find_channel(const std::string &name);

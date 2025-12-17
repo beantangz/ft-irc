@@ -10,7 +10,7 @@ int Client::recv_data() {
 	char buf[512];
 	int ret = read(fd, buf, sizeof(buf));
 	if (ret > 0)
-		buffer.append(buf, ret);
+		recv_buffer.append(buf, ret);
 	return ret;
 }
 

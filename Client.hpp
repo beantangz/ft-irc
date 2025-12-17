@@ -7,7 +7,9 @@ public:
 	int				 fd;
 	std::string		 nick;
 	std::string		 user;
-	std::string		 buffer;
+
+	std::string		recv_buffer;
+	std::string		send_buffer;
 	std::vector<Channel*> channels;
 	bool				authenticated;
 

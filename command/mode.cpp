@@ -1,27 +1,27 @@
 #include "Server.hpp"
 #include "Channel.hpp"
-
+#include "errors.hpp"
 
 //target = nom du channel
-Channel* Server::check_error_mode(Client *c,
-                                  const std::string &target)
+Channel* Server::check_error_mode(Client *c, const std::string &target,struct pollfd *fds,
+                                  int index)
 {
     if (target.empty() || target[0] != '#')
     {
-        send_numeric(c, "ft_irc", 403, target, "No such channel");
+        numeric_403(c, target, fds, index);
         return NULL;
     }
 
     Channel *ch = find_channel(target);
     if (!ch)
     {
-        send_numeric(c, "ft_irc", 403, target, "No such channel");
+        numeric_403(c, target, fds, index);
         return NULL;
     }
 
     if (!ch->isOperator(c))
     {
-        send_numeric(c, "ft_irc", 482, target, "You're not channel operator");
+        numeric_482(c, target, fds, index);
         return NULL;
     }
 
@@ -107,7 +107,7 @@ void Server::mode_key(Client *c, Channel *ch, char sign,
 
 void Server::command_MODE(Client *c, const std::string target, std::string mode, std::string param, int index, struct pollfd *fds)
 {
-   Channel *ch = check_error_mode(c, target);
+   Channel *ch = check_error_mode(c, target, fds);
     if (!ch)
         return;
 	if (mode.length() < 2)

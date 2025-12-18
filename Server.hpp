@@ -55,7 +55,7 @@ public:
 
 	void	register_client(Client *c, struct pollfd *fds, int index);
 	Channel* find_channel(const std::string &name);
-	Channel* Server::check_error_mode(Client *c, const std::string &target);
+	Channel* Server::check_error_mode(Client *c, const std::string &target, struct pollfd *fds, int index);
 
 	//commmands
 	void command_MODE(Client *c, std::string target, std::string mode,

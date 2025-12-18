@@ -127,6 +127,43 @@ void Server::mode_key(Client *c, Channel *ch, char sign,
     for (size_t i = 0; i < ch->clients.size(); i++)
         ch->clients[i]->queue_send(msg, fds, index);
 }
+void Server::mode_limit(Client *c, Channel *ch, char sign,
+                        const std::string &param, int index, struct pollfd *fds)
+{
+	if (sign == '+')
+	{
+		if(param.empty())
+		{ 
+			numeric_461(c, "MODE", fds, index);
+            return;
+		}
+		int limit = 0;
+		std::istringstream iss(param);
+		if (!(iss >> limit || limit <= 0))
+		{
+			numeric_461(c, "MODE", fds, index);
+			return ;
+		}
+		ch->has_limit = true;
+		ch->user_limit = limit;
+	}
+	else if (sign == '-')
+	{
+		ch->has_limit = false;
+		ch->user_limit = 0;
+	}
+	else
+	{
+		numeric_472(c, "l", fds, index); // mode inconnu
+        return;
+	}
+	 std::string msg = ":" + c->nick + " MODE " + ch->name + " " + sign + "l";
+    if (sign == '+')
+        msg += " " + param;
+    msg += "\r\n";
+    for (size_t i = 0; i < ch->clients.size(); i++)
+        ch->clients[i]->queue_send(msg, fds, index);
+}
 
 
 void Server::command_MODE(Client *c, const std::string target, std::string mode, std::string param,
@@ -150,6 +187,8 @@ void Server::command_MODE(Client *c, const std::string target, std::string mode,
         mode_topic_only(c, ch, sign, index, fds);
     else if (m == 'k')
         mode_key(c, ch, sign, param, index, fds);
+	else if (m == 'l')
+    	mode_limit(c, ch, sign, param, index, fds);
     else
         numeric_472(c, std::string(1, m), fds, index);
 }

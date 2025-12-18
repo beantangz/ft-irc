@@ -43,37 +43,30 @@ Channel* Server::find_channel(const std::string &name) {
 	return newCh;
 }
 
-void Server::command_NICK(Client *c, std::string nickname){
+void Server::command_NICK(Client *c, std::string &nickname) {
 	if (nickname.empty()) {
 		numeric_431(c);
 		return;
 	}
-	bool taken = false;
-	for (size_t i = 0; i < clients.size(); ++i) {
-		if (clients[i]->nick == nickname) {
-			taken = true;
-			break;
-		}
-	}
-	if (taken) {
-		numeric_433(c, nickname);
-		return;
-	}
-	c->nick = nickname;
-	numeric_001(c);
-}
 
-void Server::command_JOIN(Client *c, std::string channel_name, int index, struct pollfd *fds){
-	if (channel_name.empty()) {
-			c->queue_send("ERROR :No channel name given\r\n", fds, index);
+	for (size_t i = 0; i < clients.size(); ++i) {
+		if (clients[i] != c && clients[i]->nick == nickname) {
+			numeric_433(c, nickname);
 			return;
 		}
+	}
+
+	c->nick = nickname;
+}
+
+
+void Server::command_JOIN(Client *c, std::string channel_name, int index, struct pollfd *fds){
 		Channel* ch = find_channel(channel_name);
 		ch->add_client(c);
 		c->channels.push_back(ch);
 
 		std::string join_msg = ":" + c->nick + " JOIN :" + channel_name + "\r\n";
-		ch->broadcast(c, join_msg);
+		ch->broadcast(c, join_msg, fds, index);
 }
 
 void Server::handleBuffer(Client* c, int index, struct pollfd *fds) {
@@ -90,6 +83,26 @@ void Server::handleBuffer(Client* c, int index, struct pollfd *fds) {
 	}
 }
 
+void Server::register_client(Client *c, struct pollfd *fds, int index) {
+	c->authenticated = true;
+
+	c->queue_send(":ft_irc 001 " + c->nick +
+				  " :Welcome to the ft_irc network, " + c->nick + "\r\n",
+				  fds, index);
+
+	c->queue_send(":ft_irc 002 " + c->nick +
+				  " :Your host is ft_irc\r\n",
+				  fds, index);
+
+	c->queue_send(":ft_irc 003 " + c->nick +
+				  " :This server was created today\r\n",
+				  fds, index);
+
+	c->queue_send(":ft_irc 004 " + c->nick +
+				  " ft_irc 1.0 iowghraAbck\r\n",
+				  fds, index);
+}
+
 
 
 void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd *fds)
@@ -104,21 +117,35 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 		std::string nickname;
 		iss >> nickname;
 		command_NICK(c, nickname);
+		if (!c->user.empty() && !c->authenticated) {
+			register_client(c, fds, index);
+}
 	}
 	else if (cmd == "USER") {
-		std::string username, unused, mode, realname;
-		iss >> username >> unused >> mode;
-		std::getline(iss, realname);
-		if (!realname.empty() && realname[0] == ' ')
-			realname.erase(0, 1);
+	std::string username, unused, mode, realname;
+	iss >> username >> unused >> mode;
+	std::getline(iss, realname);
 
-		c->user = username;
-		c->authenticated = true;
-		c->queue_send("USER command accepted\r\n", fds, index);
+	if (username.empty()) {
+		send_numeric(c, "ft_irc", 461, "USER", "Not enough parameters");
+		return;
 	}
+	c->user = username;
+	if (!c->nick.empty() && !c->authenticated) {
+		register_client(c, fds, index);
+	}
+}
 	else if (cmd == "JOIN") {
+		if (!c->authenticated) {
+			send_numeric(c, "ft_irc", 451, "*", "You have not registered");
+			return;
+			}
 		std::string channel_name;
 		iss >> channel_name;
+		if (channel_name.empty()) {
+		send_numeric(c, "ft_irc", 461, "JOIN", "Not enough parameters");
+		return;
+	}
 		command_JOIN(c, channel_name,index, fds);
 	}
 	else if (cmd == "MODE")

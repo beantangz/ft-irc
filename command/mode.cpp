@@ -104,7 +104,7 @@ void Server::mode_key(Client *c, Channel *ch, char sign,
         ch->clients[i]->queue_send(msg, fds, index);
 }
 
-void 
+
 void Server::command_MODE(Client *c, const std::string target, std::string mode, std::string param, int index, struct pollfd *fds)
 {
    Channel *ch = check_error_mode(c, target);

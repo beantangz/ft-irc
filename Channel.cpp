@@ -34,10 +34,10 @@ void Channel::remove_client(Client *c)
 		operators.push_back(clients[0]);
 }
 
-void Channel::broadcast(Client *from, const std::string &msg) {
+void Channel::broadcast(Client *from, const std::string &msg, struct pollfd *fds, int index) {
 	for (Client *c : clients) {
 		if (c != from)
-			c->queu_send(msg);
+			c->queue_send(msg, fds, index);
 	}
 }
 

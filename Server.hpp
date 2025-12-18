@@ -28,13 +28,13 @@ public:
 	void remove_client(int index, int &nfds, struct pollfd *fds);
 
 
-	void accept_new_client();
-	void handle_client(Client *c);
+	void	register_client(Client *c, struct pollfd *fds, int index);
 	Channel* find_channel(const std::string &name);
 	Channel* Server::check_error_mode(Client *c, const std::string &target);
 
 	//commmands
-	void command_MODE(Client *c, std::string target, std::string mode, std::string param, int index, struct pollfd *fds);
-	void command_NICK(Client *c, std::string nickname);
+	void command_MODE(Client *c, std::string target, std::string mode,
+		 std::string param, int index, struct pollfd *fds);
+	void command_NICK(Client *c, std::string &nickname);
 	void command_JOIN(Client *c, std::string channel_name, int index, struct pollfd *fds);
 };

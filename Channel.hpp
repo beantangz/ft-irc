@@ -32,7 +32,8 @@ public:
 	void removeOperator(Client *c);
 	void add_client(Client *c);
 	void remove_client(Client *c);
-	void broadcast(Client *from, const std::string &msg);
+	void broadcast(Client *from, const std::string &msg, 
+		struct pollfd *fds, int index);
 	
 };
 

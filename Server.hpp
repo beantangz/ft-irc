@@ -31,6 +31,7 @@ public:
 	void accept_new_client();
 	void handle_client(Client *c);
 	Channel* find_channel(const std::string &name);
+	Channel* Server::check_error_mode(Client *c, const std::string &target);
 
 	//commmands
 	void command_MODE(Client *c, std::string target, std::string mode, std::string param, int index, struct pollfd *fds);

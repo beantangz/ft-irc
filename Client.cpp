@@ -20,9 +20,10 @@ void Client::queue_send(const std::string &msg, struct pollfd *fds, int index) {
 }
 
 
-void Client::join_channel(Channel *ch) {
-	channels.push_back(ch);
-}
+// void Client::join_channel(Channel *ch)
+// {
+// 	channels.push_back(ch);
+// }
 
 void Client::leave_channel(Channel *ch) {
 	// remove from vector

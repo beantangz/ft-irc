@@ -1,4 +1,4 @@
-#include "irc.hpp"
+#include "errors.hpp"
 
 void send_numeric(Client* c, const std::string& server_name, int code,
 				  const std::string& target, const std::string& message, struct pollfd *fds, int index) {

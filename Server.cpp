@@ -4,6 +4,7 @@
 #include <cstring>
 
 #include "Server.hpp"
+#include "errors.hpp"
 
 #define MAX_CLIENTS 1024
 
@@ -43,15 +44,15 @@ Channel* Server::find_channel(const std::string &name) {
 	return newCh;
 }
 
-void Server::command_NICK(Client *c, std::string &nickname) {
+void Server::command_NICK(Client *c, std::string &nickname, struct pollfd *fds, int index) {
 	if (nickname.empty()) {
-		numeric_431(c);
+		numeric_431(c, fds, index);
 		return;
 	}
 
 	for (size_t i = 0; i < clients.size(); ++i) {
 		if (clients[i] != c && clients[i]->nick == nickname) {
-			numeric_433(c, nickname);
+			numeric_433(c, nickname, fds, index);
 			return;
 		}
 	}
@@ -116,7 +117,7 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 	if (cmd == "NICK"){
 		std::string nickname;
 		iss >> nickname;
-		command_NICK(c, nickname);
+		command_NICK(c, nickname, fds, index);
 		if (!c->user.empty() && !c->authenticated) {
 			register_client(c, fds, index);
 }
@@ -127,7 +128,7 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 	std::getline(iss, realname);
 
 	if (username.empty()) {
-		send_numeric(c, "ft_irc", 461, "USER", "Not enough parameters");
+		numeric_461(c, cmd, fds, index);
 		return;
 	}
 	c->user = username;
@@ -137,13 +138,13 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 }
 	else if (cmd == "JOIN") {
 		if (!c->authenticated) {
-			send_numeric(c, "ft_irc", 451, "*", "You have not registered");
+			numeric_451(c, fds, index);
 			return;
 			}
 		std::string channel_name;
 		iss >> channel_name;
 		if (channel_name.empty()) {
-		send_numeric(c, "ft_irc", 461, "JOIN", "Not enough parameters");
+		numeric_461(c, cmd, fds, index);
 		return;
 	}
 		command_JOIN(c, channel_name,index, fds);
@@ -160,7 +161,7 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 		command_MODE(c, target, modes, param, index, fds);
 	}
 	else {
-		send_numeric(c, "ft_irc", 421, c->nick, "Unknown command");
+		numeric_421(c, cmd, fds, index);
 	}
 }
 

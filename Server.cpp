@@ -36,7 +36,7 @@ Server::~Server() {
 
 Channel* Server::find_channel(const std::string &name) {
 	if (name.empty() || name[0] != '#')
-		return nullptr;
+		return NULL;
 	for (Channel *ch : channels) {
 		if (ch->name == name)
 			return ch;
@@ -51,7 +51,7 @@ Client* Server::find_client_by_fd(int fd) {
 		if (clients[i]->fd == fd)
 			return clients[i];
 	}
-	return nullptr;
+	return NULL;
 }
 
 std::string lower_nick(std::string s) {
@@ -59,13 +59,13 @@ std::string lower_nick(std::string s) {
 	return s;
 }
 
-Client* Server::find_client_by_nick(std::string _nick){
+Client* Server::find_client_by_nick(const std::string &_nick){
 	std::string target = lower_nick(_nick);
 	for (size_t i = 0; i < clients.size(); ++i) {
 	   if (lower_nick(clients[i]->nick) == target)
 		  return clients[i];
 	}
-	return nullptr;
+	return NULL;
 }
 
 void Server::command_NICK(Client *c, std::string &nickname, struct pollfd *fds, int index) {
@@ -100,7 +100,7 @@ void Server::command_JOIN(Client *c, std::string channel_name, int index, struct
 
 void Server::command_PRIVMSG(Client *c, std::string &target, std::string &msg, struct pollfd *fds, int index){
 	if (target[0] == '#') {
-		Channel* ch = nullptr;
+		Channel* ch = NULL;
 	for (Channel* c : channels) {
 		if (c->name == target) {
 			ch = c;
@@ -155,8 +155,6 @@ void Server::register_client(Client *c, struct pollfd *fds, int index) {
 				  " ft_irc 1.0 iowghraAbck\r\n",
 				  fds, index);
 }
-
-
 
 void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd *fds)
 {
@@ -332,8 +330,6 @@ void Server::tchek_clients_out(int nfds, struct pollfd *fds) {
 		}
 	}
 }
-
-
 
 void Server::run() {
 	struct pollfd fds[MAX_CLIENTS];

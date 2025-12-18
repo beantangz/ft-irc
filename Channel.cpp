@@ -2,7 +2,17 @@
 #include <algorithm>
 
 
-Channel::Channel(const std::string &name_) : name(name_) {}
+Channel::Channel(const std::string &name_)
+    : name(name_),
+      invite_only(false),
+      topic_op_only(false),
+      has_key(false),
+      key(""),
+      has_limit(false),
+      user_limit(0)
+{
+}
+
 Channel::~Channel() {}
 
 void Channel::add_client(Client *c) 

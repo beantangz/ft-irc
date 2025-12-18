@@ -23,8 +23,8 @@ public:
 	void	tchek_clients_out(int nfds, struct pollfd *fds);
 
 
-	void	handleBuffer(Client *c, int index, struct pollfd *fds);
-	void	handleCommand(Client *c, std::string &line, int index, struct pollfd *fds);
+	void	handleBuffer(Client *c, int index, struct pollfd *fds, int &nfds);
+	void	handleCommand(Client *c, std::string &line, int index, struct pollfd *fds, int &nfds);
 
 	void	remove_client(int index, int &nfds, struct pollfd *fds);
 	void	register_client(Client *c, struct pollfd *fds, int index);
@@ -49,8 +49,6 @@ public:
 	void	mode_limit(Client *c, Channel *ch, char sign,
 					   const std::string &param, int index, struct pollfd *fds);
 
-
-	Channel* Server::check_error_mode(Client *c, const std::string &target, struct pollfd *fds, int index);
 
 	//commmands
 	void command_MODE(Client *c, std::string target, std::string mode,

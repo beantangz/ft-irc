@@ -3,13 +3,13 @@
 
 
 Channel::Channel(const std::string &name_)
-    : name(name_),
-      invite_only(false),
-      topic_op_only(false),
-      has_key(false),
-      key(""),
-      has_limit(false),
-      user_limit(0)
+	: name(name_),
+	  invite_only(false),
+	  topic_op_only(false),
+	  has_key(false),
+	  key(""),
+	  has_limit(false),
+	  user_limit(0)
 {
 }
 
@@ -19,11 +19,11 @@ void Channel::add_client(Client *c)
 {
 	//pour eviter les doublons de clients
 	if (std::find(clients.begin(), clients.end(), c) != clients.end())
-        return;
-    if (clients.empty())
-        operators.push_back(c);
+		return;
+	if (clients.empty())
+		operators.push_back(c);
 
-    clients.push_back(c);
+	clients.push_back(c);
 	//le channel sautopush dans le vecteur de channel du client
 	c->channels.push_back(this);
 }
@@ -45,11 +45,13 @@ void Channel::remove_client(Client *c)
 }
 
 void Channel::broadcast(Client *from, const std::string &msg, struct pollfd *fds, int index) {
-	for (Client *c : clients) {
+	for (size_t i = 0; i < clients.size(); ++i) {
+		Client *c = clients[i];
 		if (c != from)
 			c->queue_send(msg, fds, index);
 	}
 }
+
 
 bool Channel::isOperator(Client *c)
 {
@@ -77,7 +79,7 @@ void Channel::removeOperator(Client *c)
 		if (operators[i] == c)
 		{
 			//erase ne prend que un it en param
-			operators.erase(operators.begin() + 1);
+			operators.erase(operators.begin() + i);
 			return ;
 		}
 	}

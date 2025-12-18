@@ -2,6 +2,8 @@
 #include <iostream>
 #include <arpa/inet.h>
 #include <cstring>
+#include <cstdio>
+#include <cerrno>
 
 #include "Server.hpp"
 #include "errors.hpp"
@@ -37,9 +39,9 @@ Server::~Server() {
 Channel* Server::find_channel(const std::string &name) {
 	if (name.empty() || name[0] != '#')
 		return NULL;
-	for (Channel *ch : channels) {
-		if (ch->name == name)
-			return ch;
+	for (size_t i = 0; i < channels.size(); ++i) {
+		if (channels[i]->name == name)
+			return channels[i];
 	}
 	Channel *newCh = new Channel(name);
 	channels.push_back(newCh);
@@ -101,12 +103,12 @@ void Server::command_JOIN(Client *c, std::string channel_name, int index, struct
 void Server::command_PRIVMSG(Client *c, std::string &target, std::string &msg, struct pollfd *fds, int index){
 	if (target[0] == '#') {
 		Channel* ch = NULL;
-	for (Channel* c : channels) {
-		if (c->name == target) {
-			ch = c;
-			break;
-		}
+	for (size_t i = 0; i < channels.size(); ++i) {
+	if (channels[i]->name == target) {
+		ch = channels[i];
+		break;
 	}
+}
 		if (!ch) {
 			numeric_403(c, target, fds, index); // No such channel
 			return;
@@ -122,7 +124,7 @@ void Server::command_PRIVMSG(Client *c, std::string &target, std::string &msg, s
 	}
 }
 
-void Server::handleBuffer(Client* c, int index, struct pollfd *fds) {
+void Server::handleBuffer(Client* c, int index, struct pollfd *fds, int &nfds) {
 	size_t pos;
 
 	while ((pos = c->recv_buffer.find("\r\n")) != std::string::npos) {
@@ -132,7 +134,7 @@ void Server::handleBuffer(Client* c, int index, struct pollfd *fds) {
 		if (line.empty())
 			continue;
 
-		handleCommand(c, line, index, fds);
+		handleCommand(c, line, index, fds, nfds);
 	}
 }
 
@@ -156,7 +158,7 @@ void Server::register_client(Client *c, struct pollfd *fds, int index) {
 				  fds, index);
 }
 
-void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd *fds)
+void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd *fds, int &nfds)
 {
 	std::istringstream iss(line);
 	std::string cmd;
@@ -164,8 +166,27 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 
 	std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::toupper);
 
-	if (cmd == "NICK"){
-		std::string nickname;
+	if (cmd == "PASS") {
+		std::string pass;
+		iss >> pass;
+		if (pass.empty()) {
+			numeric_461(c, cmd, fds, index);
+			return;
+		}
+		if (pass == password) {
+			c->pass_ok = true;
+		} else {
+			numeric_464(c, fds, index);
+			remove_client(index, nfds, fds);
+		}
+	}
+
+	if (cmd == "NICK") {
+		if (!c->pass_ok && !password.empty()) {
+			numeric_464(c, fds, index);
+			return;
+		}
+			std::string nickname;
 		iss >> nickname;
 		command_NICK(c, nickname, fds, index);
 		if (!c->user.empty() && !c->authenticated) {
@@ -173,6 +194,10 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 }
 	}
 	else if (cmd == "USER") {
+		if (!c->pass_ok && !password.empty()) {
+			numeric_464(c, fds, index);
+			return;
+		}
 	std::string username, unused, mode, realname;
 	iss >> username >> unused >> mode;
 	std::getline(iss, realname);
@@ -187,6 +212,10 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 	}
 }
 	else if (cmd == "JOIN") {
+		if (!c->pass_ok && !password.empty()) {
+			numeric_464(c, fds, index);
+			return;
+		}
 		if (!c->authenticated) {
 			numeric_451(c, fds, index);
 			return;
@@ -201,6 +230,10 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 	}
 	else if (cmd == "MODE")
 	{
+		if (!c->pass_ok && !password.empty()) {
+			numeric_464(c, fds, index);
+			return;
+		}
 		std::string target;
 		std::string modes;
 		std::string param;
@@ -211,6 +244,10 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 		command_MODE(c, target, modes, param, index, fds);
 	}
 	else if (cmd == "PRIVMSG") {
+		if (!c->pass_ok && !password.empty()) {
+			numeric_464(c, fds, index);
+			return;
+		}
 	if (!c->authenticated) {
 		numeric_451(c, fds, index);
 		return;
@@ -271,10 +308,13 @@ void Server::remove_client(int index, int &nfds, struct pollfd *fds) {
 	std::cout << "Client déconnecté: fd=" << c->fd << std::endl;
 	close(c->fd);
 
-	std::vector<Client*>::iterator it = std::find(clients.begin(), clients.end(), c);
-	if (it != clients.end())
-		clients.erase(it);
+	for (size_t i = 0; i < channels.size(); i++){
+		channels[i]->remove_client(c);
+	}
+	clients.erase(std::remove(clients.begin(), clients.end(), c), clients.end());
 
+	c->recv_buffer.clear();
+	c->send_buffer.clear();
 	delete c;
 
 	for (int j = index; j < nfds - 1; j++)
@@ -300,7 +340,7 @@ void Server::tchek_clients(int &nfds, struct pollfd *fds){
 				i--;
 			}
 			else
-				handleBuffer(c, i, fds);
+				handleBuffer(c, i, fds, nfds);
 			}
 		}
 }

@@ -28,18 +28,7 @@ Channel* Server::check_error_mode(Client *c, const std::string &target,struct po
     return ch;
 }
 
-Client* Server::find_client_by_nick(const std::string &nick)
-{
-    for (size_t i = 0; i < clients.size(); i++)
-    {
-        if (clients[i]->nick == nick)
-            return clients[i];
-    }
-    return NULL;
-}
-
-
- void Server::mode_operator(Client *c, Channel *ch, char sign, const std::string &param, int index, struct pollfd *fds)
+void Server::mode_operator(Client *c, Channel *ch, char sign, const std::string &param, int index, struct pollfd *fds)
  {
 	if (param.empty())
 	{

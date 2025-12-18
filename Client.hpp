@@ -1,6 +1,7 @@
 #pragma once
 
 #include "irc.hpp"
+class Channel;
 
 class Client {
 public:
@@ -13,6 +14,7 @@ public:
 
 	std::vector<Channel*> channels;
 	bool				authenticated;
+	bool				pass_ok;
 
 	Client(int fd_);
 	~Client();

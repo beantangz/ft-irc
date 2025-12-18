@@ -35,6 +35,8 @@ Server::~Server() {
 }
 
 Channel* Server::find_channel(const std::string &name) {
+	if (name.empty() || name[0] != '#')
+		return nullptr;
 	for (Channel *ch : channels) {
 		if (ch->name == name)
 			return ch;
@@ -42,6 +44,28 @@ Channel* Server::find_channel(const std::string &name) {
 	Channel *newCh = new Channel(name);
 	channels.push_back(newCh);
 	return newCh;
+}
+
+Client* Server::find_client_by_fd(int fd) {
+	for (size_t i = 0; i < clients.size(); ++i) {
+		if (clients[i]->fd == fd)
+			return clients[i];
+	}
+	return nullptr;
+}
+
+std::string lower_nick(std::string s) {
+	std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+	return s;
+}
+
+Client* Server::find_client_by_nick(std::string _nick){
+	std::string target = lower_nick(_nick);
+	for (size_t i = 0; i < clients.size(); ++i) {
+	   if (lower_nick(clients[i]->nick) == target)
+		  return clients[i];
+	}
+	return nullptr;
 }
 
 void Server::command_NICK(Client *c, std::string &nickname, struct pollfd *fds, int index) {
@@ -63,11 +87,39 @@ void Server::command_NICK(Client *c, std::string &nickname, struct pollfd *fds, 
 
 void Server::command_JOIN(Client *c, std::string channel_name, int index, struct pollfd *fds){
 		Channel* ch = find_channel(channel_name);
+		if (!ch) {
+			send_numeric(c, "ft_irc", 476, c->nick, "Bad channel mask", fds, index);
+		return;
+		}
 		ch->add_client(c);
 		c->channels.push_back(ch);
 
 		std::string join_msg = ":" + c->nick + " JOIN :" + channel_name + "\r\n";
 		ch->broadcast(c, join_msg, fds, index);
+}
+
+void Server::command_PRIVMSG(Client *c, std::string &target, std::string &msg, struct pollfd *fds, int index){
+	if (target[0] == '#') {
+		Channel* ch = nullptr;
+	for (Channel* c : channels) {
+		if (c->name == target) {
+			ch = c;
+			break;
+		}
+	}
+		if (!ch) {
+			numeric_403(c, target, fds, index); // No such channel
+			return;
+		}
+		ch->broadcast(c, ":" + c->nick + " PRIVMSG " + target + " :" + msg + "\r\n", fds, index);
+	} else {
+		Client* dest = find_client_by_nick(target);
+		if (!dest) {
+			numeric_401(c, target, fds, index);
+			return;
+		}
+		dest->queue_send(":" + c->nick + " PRIVMSG " + target + " :" + msg + "\r\n", fds, index);
+	}
 }
 
 void Server::handleBuffer(Client* c, int index, struct pollfd *fds) {
@@ -160,6 +212,27 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 			iss >> param;
 		command_MODE(c, target, modes, param, index, fds);
 	}
+	else if (cmd == "PRIVMSG") {
+	if (!c->authenticated) {
+		numeric_451(c, fds, index);
+		return;
+	}
+	std::string target;
+	iss >> target;
+	if (target.empty()) {
+		numeric_461(c, cmd, fds, index);
+		return;
+	}
+	std::string msg;
+	std::getline(iss, msg);
+	if (!msg.empty() && msg[0] == ' ')
+		msg.erase(0, 1); // enlever l'espace avant le message
+	if (msg.empty()) {
+		numeric_412(c, fds, index);
+		return;
+	}
+	command_PRIVMSG(c, target, msg, fds, index);
+}
 	else {
 		numeric_421(c, cmd, fds, index);
 	}
@@ -191,14 +264,6 @@ void Server::tchek_listen(int &nfds, struct pollfd *fds){
 				nfds++;
 			}
 		}
-}
-
-Client* Server::find_client_by_fd(int fd) {
-	for (size_t i = 0; i < clients.size(); ++i) {
-		if (clients[i]->fd == fd)
-			return clients[i];
-	}
-	return nullptr;
 }
 
 void Server::remove_client(int index, int &nfds, struct pollfd *fds) {

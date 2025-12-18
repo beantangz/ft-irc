@@ -25,6 +25,7 @@ public:
 	void handleCommand(Client *c, std::string& line, int index, struct pollfd *fds);
 
 	Client* find_client_by_fd(int fd);
+	Client* find_client_by_nick(std::string nick);
 	void remove_client(int index, int &nfds, struct pollfd *fds);
 
 
@@ -37,4 +38,5 @@ public:
 		 std::string param, int index, struct pollfd *fds);
 	void command_NICK(Client *c, std::string &nickname, struct pollfd *fds, int index);
 	void command_JOIN(Client *c, std::string channel_name, int index, struct pollfd *fds);
+	void command_PRIVMSG(Client *c, std::string &target, std::string &msg, struct pollfd *fds, int index);
 };

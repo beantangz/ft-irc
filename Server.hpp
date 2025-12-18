@@ -37,7 +37,7 @@ public:
     Channel* find_channel(const std::string &name);
 
 	// MODE fonctions
-    Channel* check_error_mode(Client *c, const std::string &target);
+    Channel* check_error_mode(Client *c, const std::string &target, struct pollfd *fds, int index);
     void    mode_operator(Client *c, Channel *ch, char sign,
                           const std::string &param, int index, struct pollfd *fds);
     void    mode_invite_only(Client *c, Channel *ch, char sign,

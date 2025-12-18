@@ -43,39 +43,58 @@ Client* Server::find_client_by_nick(const std::string &nick)
  {
 	if (param.empty())
 	{
-		send_numeric(c, "ft_irc", 461, "MODE", "Not enough parameters");
+		numeric_461(c, "MODE", fds, index);
 		return;
 	}
 	Client *target_client = find_client_by_nick(param);
 	if (!target_client)
 	{
-		send_numeric(c, "ft_irc", 401, param, "No such Nick");  //a changer
+		numeric_401(c, param, fds, index);
 		return;
 	}
 	if (sign == '+')
 		ch->addOperator(target_client);
-	else
+	else if(sign == '-')
 		ch->removeOperator(target_client);
-	
+	else
+	{
+		 numeric_472(c, "o", fds, index);
+		 return ;
+	}
     std::string msg = ":" + c->nick + " MODE " + ch->name + " " + sign + "o " + param + "\r\n";
     // notifier tous les clients
     for (size_t i = 0; i < ch->clients.size(); i++)
         ch->clients[i]->queue_send(msg, fds, index);
  }
 
- void Server::mode_invite_only(Client *c, Channel *ch, char sign, int index, struct pollfd *fds)
- {
-	if (sign == '+')
-		ch->invite_only = true;
-	std::string msg = ":" + c->nick + " MODE " + ch->name + " " + sign + "i\r\n";
+void Server::mode_invite_only(Client *c, Channel *ch, char sign, int index, struct pollfd *fds)
+{
+    if (sign == '+')
+        ch->invite_only = true;
+    else if (sign == '-')
+        ch->invite_only = false;
+    else
+    {
+        numeric_472(c, "i", fds, index);
+        return;
+    }
+    std::string msg = ":" + c->nick + " MODE " + ch->name +
+                      " " + sign + "i\r\n";
     for (size_t i = 0; i < ch->clients.size(); i++)
         ch->clients[i]->queue_send(msg, fds, index);
- }
+}
 
 void Server::mode_topic_only(Client *c, Channel *ch, char sign, int index, struct pollfd *fds) 
 {
     if (sign == '+')
 		ch->topic_op_only = true;
+	else if (sign == '-')
+        ch->topic_op_only = false;
+	else
+    {
+        numeric_472(c, "t", fds, index);
+        return;
+    }
     std::string msg = ":" + c->nick + " MODE " + ch->name + " " + sign + "t\r\n";
     for (size_t i = 0; i < ch->clients.size(); i++)
         ch->clients[i]->queue_send(msg, fds, index);
@@ -88,36 +107,49 @@ void Server::mode_key(Client *c, Channel *ch, char sign,
     {
         if (param.empty())
         {
-            send_numeric(c, "ft_irc", 461, "MODE", "Not enough parameters");
+            numeric_461(c, "MODE", fds, index);
             return;
         }
         ch->has_key = true;
         ch->key = param;
     }
-    else
+    else if (sign == '-')
     {
         ch->has_key = false;
         ch->key.clear();
     }
+	else
+	{
+		numeric_472(c, "k", fds, index);
+		return ;
+	}
     std::string msg = ":" + c->nick + " MODE " + ch->name + " " + sign + "k\r\n";
     for (size_t i = 0; i < ch->clients.size(); i++)
         ch->clients[i]->queue_send(msg, fds, index);
 }
 
 
-void Server::command_MODE(Client *c, const std::string target, std::string mode, std::string param, int index, struct pollfd *fds)
+void Server::command_MODE(Client *c, const std::string target, std::string mode, std::string param,
+                          int index, struct pollfd *fds)
 {
-   Channel *ch = check_error_mode(c, target, fds);
+    Channel *ch = check_error_mode(c, target, fds, index);
     if (!ch)
         return;
-	if (mode.length() < 2)
-	{
-		send_numeric(c, "ft_irc", 472, "MODE", "Unknownn mode");
-		return ;
-	}
-	char sign = mode[0];
-	char m = mode[1];
-
-	if (m == 'o')
-		mode_operator(c, ch, sign, param, index, fds);
+    if (mode.length() < 2)
+    {
+        numeric_472(c, mode, fds, index);
+        return;
+    }
+    char sign = mode[0];
+    char m = mode[1];
+    if (m == 'o')
+        mode_operator(c, ch, sign, param, index, fds);
+    else if (m == 'i')
+        mode_invite_only(c, ch, sign, index, fds);
+    else if (m == 't')
+        mode_topic_only(c, ch, sign, index, fds);
+    else if (m == 'k')
+        mode_key(c, ch, sign, param, index, fds);
+    else
+        numeric_472(c, std::string(1, m), fds, index);
 }

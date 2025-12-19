@@ -19,13 +19,14 @@ public:
 	
 	bool invite_only; //+i
 	bool topic_op_only; //+t
-
+	std::string topic;
 	bool has_key;//+k
 	std::string key;
 
 	bool has_limit;//+l
 	int user_limit;
 
+	bool isTopicProtected();
 	bool isInvited(Client *c);
 	void addInvitation(Client* c);
 	bool isInviteOnly() const { return invite_only; }

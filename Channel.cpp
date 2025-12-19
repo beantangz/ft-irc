@@ -67,7 +67,13 @@ void Channel::addInvitation(Client* c)
 {
 	invited_clients.push_back(c);
 }
-
+bool Channel::isTopicProtected()
+{
+	if (topic_op_only)
+		return true;
+	else
+		return false;
+}
 bool Channel::isInvited(Client *c)
 {
 	for (std::vector<Client*>::iterator it = invited_clients.begin();

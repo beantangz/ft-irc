@@ -36,6 +36,20 @@ void numeric_004(Client* c, struct pollfd *fds, int index) {
 		fds, index);
 }
 
+void numeric_331(Client* c, const std::string& channel, struct pollfd* fds, int index)
+{
+    send_numeric(c, "ft_irc", 331, c->nick,
+                 channel + " :No topic is set",
+                 fds, index);
+}
+void numeric_332(Client* c, const std::string& channel,
+                 const std::string& topic, struct pollfd* fds, int index)
+{
+    send_numeric(c, "ft_irc", 332, c->nick,
+                 channel + " :" + topic,
+                 fds, index);
+}
+
 void numeric_341(Client* c, const std::string& target_nick, const std::string& channel,
                  struct pollfd *fds, int index)
 {

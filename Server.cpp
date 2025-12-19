@@ -212,7 +212,39 @@ void Server::command_INVITE(Client* inviter, const std::string& target_nick,
                              " INVITE " + target_nick + " :" + channel_name;
     target->queue_send(invite_msg, fds, index);
 }
-
+void Server::command_TOPIC(Client* c, const std::string& channel_name,
+                           const std::string& new_topic,struct pollfd* fds, int index)
+{
+	Channel* ch = find_channel(channel_name);
+    if (!ch)
+    {
+        numeric_403(c, channel_name, fds, index);
+        return;
+    }
+    if (!ch->has_client(c))
+    {
+        numeric_442(c, channel_name, fds, index);
+        return;
+    }
+	if (new_topic.empty())
+    {
+        // Le client veut juste voir le topic
+        if (ch->topic.empty())
+            numeric_331(c, channel_name, fds, index); // Pas de topic
+        else
+            numeric_332(c, channel_name, ch->topic, fds, index); // Topic actuel
+        return;
+    }
+	if (ch->isTopicProtected() && !ch->isOperator(c))
+	 {
+        numeric_482(c, channel_name, fds, index); // Pas le droit de changer le topic
+        return;
+    }
+	ch->topic = new_topic;
+	std::string topic_msg = ":" + c->nick + "!" + c->user +
+				" TOPIC " + channel_name + " :" + new_topic;
+    ch->broadcast(NULL, topic_msg, fds, index);
+}
 
 void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd *fds, int &nfds)
 {
@@ -376,6 +408,32 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
         	return;
     	}
     	command_INVITE(c, target_nick, channel_name, fds, index);
+	}
+	else if (cmd == "TOPIC")
+	{
+		    if (!c->pass_ok && !password.empty())
+    {
+        numeric_464(c, fds, index); 
+        return;
+    }
+    if (!c->authenticated)
+    {
+        numeric_451(c, fds, index);
+        return;
+    }
+    std::string channel_name;
+    std::string new_topic;
+    iss >> channel_name;
+    std::getline(iss, new_topic);
+    if (!new_topic.empty() && new_topic[0] == ' ')
+        new_topic.erase(0, 1);
+
+    if (channel_name.empty())
+    {
+        numeric_461(c, cmd, fds, index);
+        return;
+    }
+	command_TOPIC(c, channel_name, new_topic, fds, index);
 	}
 	else 
 		numeric_421(c, cmd, fds, index);

@@ -34,6 +34,8 @@ void numeric_431(Client* c, struct pollfd *fds, int index);
 
 void numeric_433(Client* c, const std::string& nick, struct pollfd *fds, int index);
 
+void numeric_462(Client* c, struct pollfd *fds, int index);
+
 void numeric_464(Client* c, struct pollfd *fds, int index);
 
 void numeric_472(Client* c, const std::string& mode, struct pollfd *fds, int index);

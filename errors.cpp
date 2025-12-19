@@ -93,6 +93,11 @@ void numeric_433(Client* c, const std::string& nick, struct pollfd *fds, int ind
 	send_numeric(c, "ft_irc", 433, nick, "Nickname is already in use", fds, index);
 }
 
+void numeric_462(Client* c, struct pollfd *fds, int index) {
+	send_numeric(c, "ft_irc", 462, c->nick,":You may not reregister", fds, index);
+}
+
+
 void numeric_464(Client* c, struct pollfd *fds, int index) {
 	send_numeric(c, "ft_irc", 464, "*", "Password incorrect", fds, index);
 }

@@ -139,6 +139,12 @@ void Server::handleBuffer(Client* c, int index, struct pollfd *fds, int &nfds) {
 }
 
 void Server::register_client(Client *c, struct pollfd *fds, int index) {
+	if (!c->pass_ok)
+		return;
+
+	if (c->authenticated) 
+		return;
+
 	c->authenticated = true;
 
 	c->queue_send(":ft_irc 001 " + c->nick +
@@ -152,10 +158,6 @@ void Server::register_client(Client *c, struct pollfd *fds, int index) {
 	c->queue_send(":ft_irc 003 " + c->nick +
 				  " :This server was created today\r\n",
 				  fds, index);
-
-	c->queue_send(":ft_irc 004 " + c->nick +
-				  " ft_irc 1.0 iowghraAbck\r\n",
-				  fds, index);
 }
 
 void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd *fds, int &nfds)
@@ -166,9 +168,15 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 
 	std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::toupper);
 
+	std::cout << line << std::endl << std::flush;
+
 	if (cmd == "PASS") {
 		std::string pass;
 		iss >> pass;
+		if (c->authenticated) {
+			numeric_462(c, fds, index);
+			return;
+		}
 		if (pass.empty()) {
 			numeric_461(c, cmd, fds, index);
 			return;
@@ -178,44 +186,32 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 		} else {
 			numeric_464(c, fds, index);
 			remove_client(index, nfds, fds);
-		}
-	}
-
-	if (cmd == "NICK") {
-		if (!c->pass_ok && !password.empty()) {
-			numeric_464(c, fds, index);
 			return;
 		}
-			std::string nickname;
+	}
+	else if (cmd == "NICK") {
+		std::string nickname;
 		iss >> nickname;
 		command_NICK(c, nickname, fds, index);
-		if (!c->user.empty() && !c->authenticated) {
+		if (!c->user.empty()) {
 			register_client(c, fds, index);
-}
+		}
 	}
 	else if (cmd == "USER") {
-		if (!c->pass_ok && !password.empty()) {
-			numeric_464(c, fds, index);
-			return;
-		}
-	std::string username, unused, mode, realname;
-	iss >> username >> unused >> mode;
-	std::getline(iss, realname);
+		std::string username, unused, mode, realname;
+		iss >> username >> unused >> mode;
+		std::getline(iss, realname);
 
-	if (username.empty()) {
-		numeric_461(c, cmd, fds, index);
-		return;
-	}
-	c->user = username;
-	if (!c->nick.empty() && !c->authenticated) {
-		register_client(c, fds, index);
-	}
-}
-	else if (cmd == "JOIN") {
-		if (!c->pass_ok && !password.empty()) {
-			numeric_464(c, fds, index);
+		if (username.empty()) {
+			numeric_461(c, cmd, fds, index);
 			return;
 		}
+		c->user = username;
+		if (!c->nick.empty()) {
+		register_client(c, fds, index);
+		}
+	}
+	else if (cmd == "JOIN") {
 		if (!c->authenticated) {
 			numeric_451(c, fds, index);
 			return;
@@ -225,15 +221,11 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 		if (channel_name.empty()) {
 		numeric_461(c, cmd, fds, index);
 		return;
-	}
+		}
 		command_JOIN(c, channel_name,index, fds);
 	}
 	else if (cmd == "MODE")
 	{
-		if (!c->pass_ok && !password.empty()) {
-			numeric_464(c, fds, index);
-			return;
-		}
 		std::string target;
 		std::string modes;
 		std::string param;
@@ -244,30 +236,30 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 		command_MODE(c, target, modes, param, index, fds);
 	}
 	else if (cmd == "PRIVMSG") {
-		if (!c->pass_ok && !password.empty()) {
-			numeric_464(c, fds, index);
+		if (!c->authenticated) {
+			numeric_451(c, fds, index);
 			return;
 		}
-	if (!c->authenticated) {
-		numeric_451(c, fds, index);
-		return;
+		std::string target;
+		iss >> target;
+		if (target.empty()) {
+			numeric_461(c, cmd, fds, index);
+			return;
+		}
+		std::string msg;
+		std::getline(iss, msg);
+		if (!msg.empty() && msg[0] == ' ')
+			msg.erase(0, 1); // enlever l'espace avant le message
+		if (msg.empty()) {
+			numeric_412(c, fds, index);
+			return;
+		}
+		command_PRIVMSG(c, target, msg, fds, index);
 	}
-	std::string target;
-	iss >> target;
-	if (target.empty()) {
-		numeric_461(c, cmd, fds, index);
-		return;
+	else if (cmd == "PING") {
+		std::string token; iss >> token;
+		c->queue_send("PONG :" + token + "\r\n", fds, index);
 	}
-	std::string msg;
-	std::getline(iss, msg);
-	if (!msg.empty() && msg[0] == ' ')
-		msg.erase(0, 1); // enlever l'espace avant le message
-	if (msg.empty()) {
-		numeric_412(c, fds, index);
-		return;
-	}
-	command_PRIVMSG(c, target, msg, fds, index);
-}
 	else {
 		numeric_421(c, cmd, fds, index);
 	}

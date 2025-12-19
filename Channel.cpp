@@ -63,7 +63,21 @@ void Channel::broadcast(Client *from, const std::string &msg, struct pollfd *fds
 	}
 }
 
+void Channel::addInvitation(Client* c)
+{
+	invited_clients.push_back(c);
+}
 
+bool Channel::isInvited(Client *c)
+{
+	for (std::vector<Client*>::iterator it = invited_clients.begin();
+	it != invited_clients.end(); it++)
+	{
+		if (c = *it)
+			return true;
+	}
+	return false;
+}
 bool Channel::isOperator(Client *c)
 {
 	for (size_t i = 0; i < operators.size(); i++)

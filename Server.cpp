@@ -185,6 +185,34 @@ void Server::command_KICK(Client* kicker, const std::string& channel_name,
 	ch->broadcast(kicker, kick_msg, fds, index);
 	ch->remove_client(target);
 }
+void Server::command_INVITE(Client* inviter, const std::string& target_nick,
+	const std::string& channel_name, struct pollfd* fds, int index)
+{
+	Channel* ch = find_channel(channel_name);
+	  if (!ch)
+    {
+        numeric_403(inviter, channel_name, fds, index);
+        return;
+    }
+	Client* target = find_client_by_nick(target_nick);
+	if (!target)
+    {
+        numeric_401(inviter, target_nick, fds, index);
+        return;
+    }
+	//Si le mec invite nest pas sur le channel de base
+    if (!ch->has_client(inviter))
+    {
+        numeric_442(inviter, channel_name, fds, index);
+        return;
+    }
+	if (ch->isInviteOnly())
+		ch->addInvitation(target);
+	std::string invite_msg = ":" + inviter->nick + "!" + inviter->user +
+                             " INVITE " + target_nick + " :" + channel_name;
+    target->queue_send(invite_msg, fds, index);
+}
+
 
 void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd *fds, int &nfds)
 {
@@ -326,6 +354,28 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 			return ;
 		}
 		command_KICK(c, channel_name, target_nick, reason, fds, index);
+	}
+	else if (cmd == "INVITE")
+	{
+    	if (!c->pass_ok && !password.empty())
+    	{
+        	numeric_464(c, fds, index);
+        	return;
+    	}
+    	if (!c->authenticated)
+    	{
+        	numeric_451(c, fds, index);
+        	return;
+    	}
+    	std::string target_nick;
+    	std::string channel_name;
+    	iss >> target_nick >> channel_name;
+    	if (target_nick.empty() || channel_name.empty())
+    	{
+        	numeric_461(c, cmd, fds, index);
+        	return;
+    	}
+    	command_INVITE(c, target_nick, channel_name, fds, index);
 	}
 	else 
 		numeric_421(c, cmd, fds, index);

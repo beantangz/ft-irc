@@ -53,13 +53,25 @@ void Channel::remove_client(Client *c)
 		operators.push_back(clients[0]);
 }
 
-void Channel::broadcast(Client *from, const std::string &msg, struct pollfd *fds, int index) 
+int find_index_in_fds(int fd, struct pollfd *fds, int nfds) {
+	for(int i = 0; i < nfds; ++i) {
+	if (fds[i].fd == fd)
+		return i;
+	}
+	return -1;
+}
+
+void Channel::broadcast(Client *from, const std::string &msg, struct pollfd *fds, int index, int nfds) 
 {
+	(void)index;
 	for (size_t i = 0; i < clients.size(); ++i)
 	{
 		Client *c = clients[i];
 		if (c != from)
-			c->queue_send(msg, fds, index);
+		{
+			int idx = find_index_in_fds(c->fd, fds, nfds);
+			c->queue_send(msg, fds, idx);
+		}
 	}
 }
 

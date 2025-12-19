@@ -87,7 +87,7 @@ void Server::command_NICK(Client *c, std::string &nickname, struct pollfd *fds, 
 }
 
 
-void Server::command_JOIN(Client *c, std::string channel_name, int index, struct pollfd *fds){
+void Server::command_JOIN(Client *c, std::string channel_name, int index, struct pollfd *fds, int nfds){
 		Channel* ch = find_channel(channel_name);
 		if (!ch) {
 			send_numeric(c, "ft_irc", 476, c->nick, "Bad channel mask", fds, index);
@@ -97,10 +97,10 @@ void Server::command_JOIN(Client *c, std::string channel_name, int index, struct
 		c->channels.push_back(ch);
 
 		std::string join_msg = ":" + c->nick + " JOIN :" + channel_name + "\r\n";
-		ch->broadcast(c, join_msg, fds, index);
+		ch->broadcast(c, join_msg, fds, index, nfds);
 }
 
-void Server::command_PRIVMSG(Client *c, std::string &target, std::string &msg, struct pollfd *fds, int index){
+void Server::command_PRIVMSG(Client *c, std::string &target, std::string &msg, struct pollfd *fds, int index, int nfds){
 	if (target[0] == '#') {
 		Channel* ch = NULL;
 	for (size_t i = 0; i < channels.size(); ++i) {
@@ -113,7 +113,7 @@ void Server::command_PRIVMSG(Client *c, std::string &target, std::string &msg, s
 			numeric_403(c, target, fds, index); // No such channel
 			return;
 		}
-		ch->broadcast(c, ":" + c->nick + " PRIVMSG " + target + " :" + msg + "\r\n", fds, index);
+		ch->broadcast(c, ":" + c->nick + " PRIVMSG " + target + " :" + msg + "\r\n", fds, index, nfds);
 	} else {
 		Client* dest = find_client_by_nick(target);
 		if (!dest) {
@@ -162,7 +162,7 @@ void Server::register_client(Client *c, struct pollfd *fds, int index) {
 
 void Server::command_KICK(Client* kicker, const std::string& channel_name,
 						  const std::string& target_nick, const std::string& reason,
-						  struct pollfd* fds, int index)
+						  struct pollfd* fds, int index, int nfds)
 {
 	Channel* ch = find_channel(channel_name);
 	if (!ch)
@@ -184,7 +184,7 @@ void Server::command_KICK(Client* kicker, const std::string& channel_name,
 	std::string kick_msg = ":" + kicker->nick + "!"+ kicker->user +" KICK " + channel_name + " " + target_nick;
 	if (!reason.empty())
 		kick_msg += " :" + reason;
-	ch->broadcast(kicker, kick_msg, fds, index);
+	ch->broadcast(kicker, kick_msg, fds, index, nfds);
 	ch->remove_client(target);
 }
 void Server::command_INVITE(Client* inviter, const std::string& target_nick,
@@ -215,7 +215,7 @@ void Server::command_INVITE(Client* inviter, const std::string& target_nick,
 	target->queue_send(invite_msg, fds, index);
 }
 void Server::command_TOPIC(Client* c, const std::string& channel_name,
-						   const std::string& new_topic,struct pollfd* fds, int index)
+						   const std::string& new_topic,struct pollfd* fds, int index, int nfds)
 {
 	Channel* ch = find_channel(channel_name);
 	if (!ch)
@@ -245,7 +245,7 @@ void Server::command_TOPIC(Client* c, const std::string& channel_name,
 	ch->topic = new_topic;
 	std::string topic_msg = ":" + c->nick + "!" + c->user +
 				" TOPIC " + channel_name + " :" + new_topic;
-	ch->broadcast(NULL, topic_msg, fds, index);
+	ch->broadcast(NULL, topic_msg, fds, index, nfds);
 }
 
 void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd *fds, int &nfds)
@@ -310,7 +310,7 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 		numeric_461(c, cmd, fds, index);
 		return;
 		}
-		command_JOIN(c, channel_name,index, fds);
+		command_JOIN(c, channel_name,index, fds, nfds);
 	}
 	else if (cmd == "MODE")
 	{
@@ -342,7 +342,7 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 			numeric_412(c, fds, index);
 			return;
 		}
-		command_PRIVMSG(c, target, msg, fds, index);
+		command_PRIVMSG(c, target, msg, fds, index, nfds);
 	}
 	else if (cmd == "PING") {
 		std::string token; iss >> token;
@@ -372,7 +372,7 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 			numeric_461(c, cmd, fds, index);
 			return ;
 		}
-		command_KICK(c, channel_name, target_nick, reason, fds, index);
+		command_KICK(c, channel_name, target_nick, reason, fds, index, nfds);
 	}
 	else if (cmd == "INVITE")
 	{
@@ -420,7 +420,7 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 			numeric_461(c, cmd, fds, index);
 			return;
 		}
-		command_TOPIC(c, channel_name, new_topic, fds, index);
+		command_TOPIC(c, channel_name, new_topic, fds, index, nfds);
 	}
 	else 
 		numeric_421(c, cmd, fds, index);

@@ -1,23 +1,34 @@
-NAME = ircserv
-CFLAGS = -Wall -Wextra -Werror -std=c++98 -MMD -MP
 CXX = c++
-SRCS = Channel.cpp Client.cpp errors.cpp main.cpp Server.cpp mode.cpp
-OBJS = $(SRCS:.cpp=.o)
+CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -MMD -MP
+
+SRC = Channel.cpp Client.cpp errors.cpp main.cpp Server.cpp mode.cpp
+
+OBJ_DIR = obj
+OBJ = $(SRC:%.cpp=$(OBJ_DIR)/%.o)
+DEP = $(OBJ:.o=.d)
+
+NAME = irc_serv
 
 all: $(NAME)
 
-$(NAME): $(OBJS)
-	$(CXX) $(OBJS) -o $(NAME)
+$(OBJ_DIR):
+	mkdir -p $(OBJ_DIR)
 
-%.o: %.cpp
-	$(CXX) $(CFLAGS) -c $< -o $@
+$(OBJ_DIR)/%.o: %.cpp | $(OBJ_DIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
--include $(OBJS:.o=.d)
+$(NAME): $(OBJ)
+	$(CXX) $(CXXFLAGS) $(OBJ) -o $(NAME)
 
 clean:
-	rm -f $(OBJS) $(OBJS:.o=.d)
+	rm -rf $(OBJ_DIR)
 
 fclean: clean
 	rm -f $(NAME)
 
 re: fclean all
+
+-include $(DEP)
+
+
+

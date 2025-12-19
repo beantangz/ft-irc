@@ -158,6 +158,34 @@ void Server::register_client(Client *c, struct pollfd *fds, int index) {
 				  fds, index);
 }
 
+void Server::command_KICK(Client* kicker, const std::string& channel_name,
+                          const std::string& target_nick, const std::string& reason,
+						  struct pollfd* fds, int index)
+{
+	Channel* ch = find_channel(channel_name);
+	if (!ch)
+	{
+		numeric_403(kicker, channel_name, fds, index);
+		return;
+	}
+	if (!ch->isOperator(kicker))
+	{
+		numeric_482(kicker, channel_name, fds, index);
+		return ;
+	}
+	Client* target = find_client_by_nick(target_nick);
+	if (!target || !ch->has_client(kicker))
+	{
+		numeric_441(kicker, target_nick, channel_name, fds, index);
+		return ;
+	}
+	std::string kick_msg = ":" + kicker->nick + "!"+ kicker->user +" KICK " + channel_name + " " + target_nick;
+    if (!reason.empty())
+		kick_msg += " :" + reason;
+	ch->broadcast(kicker, kick_msg, fds, index);
+	ch->remove_client(target);
+}
+
 void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd *fds, int &nfds)
 {
 	std::istringstream iss(line);
@@ -243,34 +271,64 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 			iss >> param;
 		command_MODE(c, target, modes, param, index, fds);
 	}
-	else if (cmd == "PRIVMSG") {
-		if (!c->pass_ok && !password.empty()) {
+	else if (cmd == "PRIVMSG")
+	{
+		if (!c->pass_ok && !password.empty()) 
+		{
 			numeric_464(c, fds, index);
 			return;
 		}
-	if (!c->authenticated) {
-		numeric_451(c, fds, index);
-		return;
+		if (!c->authenticated) 
+		{
+			numeric_451(c, fds, index);
+			return;
+		}
+		std::string target;
+		iss >> target;
+		if (target.empty()) 
+		{
+			numeric_461(c, cmd, fds, index);
+			return;
+		}
+		std::string msg;
+		std::getline(iss, msg);
+		if (!msg.empty() && msg[0] == ' ')
+			msg.erase(0, 1); // enlever l'espace avant le message
+		if (msg.empty()) 
+		{
+			numeric_412(c, fds, index);
+			return;
+		}
+		command_PRIVMSG(c, target, msg, fds, index);
 	}
-	std::string target;
-	iss >> target;
-	if (target.empty()) {
-		numeric_461(c, cmd, fds, index);
-		return;
+	else if (cmd == "KICK")
+	{
+		if (!c->pass_ok && !password.empty())
+		{
+			numeric_464(c, fds, index);
+			return ;
+		}
+		if (!c->authenticated)
+		{
+			numeric_464(c, fds, index);
+			return ;
+		}
+		std::string channel_name;
+		std::string target_nick;
+		std::string reason;
+		iss >> channel_name >> target_nick;
+		std::getline(iss, reason);
+		if (!reason.empty() && reason[0] == ' ') //enlever lespace initial 	
+			reason.erase(0, 1);					//qui reste au debut de reason
+		if (channel_name.empty() || target_nick.empty())
+		{
+			numeric_461(c, cmd, fds, index);
+			return ;
+		}
+		command_KICK(c, channel_name, target_nick, reason, fds, index);
 	}
-	std::string msg;
-	std::getline(iss, msg);
-	if (!msg.empty() && msg[0] == ' ')
-		msg.erase(0, 1); // enlever l'espace avant le message
-	if (msg.empty()) {
-		numeric_412(c, fds, index);
-		return;
-	}
-	command_PRIVMSG(c, target, msg, fds, index);
-}
-	else {
+	else 
 		numeric_421(c, cmd, fds, index);
-	}
 }
 
 void Server::tchek_listen(int &nfds, struct pollfd *fds){

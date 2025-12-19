@@ -18,7 +18,6 @@ public:
 
 	
 	bool invite_only; //+i
-
 	bool topic_op_only; //+t
 
 	bool has_key;//+k
@@ -27,7 +26,7 @@ public:
 	bool has_limit;//+l
 	int user_limit;
 
-	
+	bool has_client(Client* c);
 	bool isOperator(Client *c);
 	void addOperator(Client *c);
 	void removeOperator(Client *c);

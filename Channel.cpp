@@ -15,6 +15,15 @@ Channel::Channel(const std::string &name_)
 
 Channel::~Channel() {}
 
+bool Channel::has_client(Client* c)
+{
+	for (size_t i =0; i < clients.size(); i++)
+	{
+		if (c = clients[i])
+			return true;
+	}
+	return false;
+}
 void Channel::add_client(Client *c) 
 {
 	//pour eviter les doublons de clients
@@ -44,8 +53,10 @@ void Channel::remove_client(Client *c)
 		operators.push_back(clients[0]);
 }
 
-void Channel::broadcast(Client *from, const std::string &msg, struct pollfd *fds, int index) {
-	for (size_t i = 0; i < clients.size(); ++i) {
+void Channel::broadcast(Client *from, const std::string &msg, struct pollfd *fds, int index) 
+{
+	for (size_t i = 0; i < clients.size(); ++i)
+	{
 		Client *c = clients[i];
 		if (c != from)
 			c->queue_send(msg, fds, index);

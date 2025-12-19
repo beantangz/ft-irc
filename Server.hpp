@@ -51,6 +51,13 @@ public:
 
 
 	//commmands
+	void command_TOPIC(Client* c, const std::string& channel_name,
+                           const std::string& new_topic,struct pollfd* fds, int index);
+	void command_KICK(Client* kicker, const std::string& channel_name,
+                          const std::string& target_nick, const std::string& reason,
+                          struct pollfd* fds, int index);
+	void command_INVITE(Client* inviter, const std::string& target_nick,
+	const std::string& channel_name, struct pollfd* fds, int index);
 	void command_MODE(Client *c, std::string target, std::string mode,
 		 std::string param, int index, struct pollfd *fds);
 	void command_NICK(Client *c, std::string &nickname, struct pollfd *fds, int index);

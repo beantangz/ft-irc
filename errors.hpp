@@ -13,6 +13,13 @@ void numeric_003(Client* c, struct pollfd *fds, int index);
 
 void numeric_004(Client* c, struct pollfd *fds, int index);
 
+void numeric_331(Client* c, const std::string& channel, struct pollfd* fds, int index);
+
+void numeric_332(Client* c, const std::string& channel,
+				 const std::string& topic, struct pollfd* fds, int index);
+
+void numeric_341(Client* c, const std::string& target_nick, const std::string& channel,
+                 struct pollfd *fds, int index);
 void numeric_401(Client* c, const std::string& target, struct pollfd *fds, int index);
 
 void numeric_412(Client* c, struct pollfd *fds, int index);

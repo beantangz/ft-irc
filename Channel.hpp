@@ -10,7 +10,7 @@ public:
 
 	std::vector<Client*> clients;
 	std::vector<Client*> operators;
-
+	std::vector<Client*> invited_clients;
 	Channel(const std::string &name_);
 	~Channel();
 
@@ -18,16 +18,19 @@ public:
 
 	
 	bool invite_only; //+i
-
 	bool topic_op_only; //+t
-
+	std::string topic;
 	bool has_key;//+k
 	std::string key;
 
 	bool has_limit;//+l
 	int user_limit;
 
-	
+	bool isTopicProtected();
+	bool isInvited(Client *c);
+	void addInvitation(Client* c);
+	bool isInviteOnly() const { return invite_only; }
+	bool has_client(Client* c);
 	bool isOperator(Client *c);
 	void addOperator(Client *c);
 	void removeOperator(Client *c);

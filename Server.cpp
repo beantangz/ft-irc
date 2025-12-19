@@ -160,6 +160,94 @@ void Server::register_client(Client *c, struct pollfd *fds, int index) {
 				  fds, index);
 }
 
+void Server::command_KICK(Client* kicker, const std::string& channel_name,
+						  const std::string& target_nick, const std::string& reason,
+						  struct pollfd* fds, int index)
+{
+	Channel* ch = find_channel(channel_name);
+	if (!ch)
+	{
+		numeric_403(kicker, channel_name, fds, index);
+		return;
+	}
+	if (!ch->isOperator(kicker))
+	{
+		numeric_482(kicker, channel_name, fds, index);
+		return ;
+	}
+	Client* target = find_client_by_nick(target_nick);
+	if (!target || !ch->has_client(kicker))
+	{
+		numeric_441(kicker, target_nick, channel_name, fds, index);
+		return ;
+	}
+	std::string kick_msg = ":" + kicker->nick + "!"+ kicker->user +" KICK " + channel_name + " " + target_nick;
+	if (!reason.empty())
+		kick_msg += " :" + reason;
+	ch->broadcast(kicker, kick_msg, fds, index);
+	ch->remove_client(target);
+}
+void Server::command_INVITE(Client* inviter, const std::string& target_nick,
+	const std::string& channel_name, struct pollfd* fds, int index)
+{
+	Channel* ch = find_channel(channel_name);
+	  if (!ch)
+	{
+		numeric_403(inviter, channel_name, fds, index);
+		return;
+	}
+	Client* target = find_client_by_nick(target_nick);
+	if (!target)
+	{
+		numeric_401(inviter, target_nick, fds, index);
+		return;
+	}
+	//Si le mec invite nest pas sur le channel de base
+	if (!ch->has_client(inviter))
+	{
+		numeric_442(inviter, channel_name, fds, index);
+		return;
+	}
+	if (ch->isInviteOnly())
+		ch->addInvitation(target);
+	std::string invite_msg = ":" + inviter->nick + "!" + inviter->user +
+							 " INVITE " + target_nick + " :" + channel_name;
+	target->queue_send(invite_msg, fds, index);
+}
+void Server::command_TOPIC(Client* c, const std::string& channel_name,
+						   const std::string& new_topic,struct pollfd* fds, int index)
+{
+	Channel* ch = find_channel(channel_name);
+	if (!ch)
+	{
+		numeric_403(c, channel_name, fds, index);
+		return;
+	}
+	if (!ch->has_client(c))
+	{
+		numeric_442(c, channel_name, fds, index);
+		return;
+	}
+	if (new_topic.empty())
+	{
+		// Le client veut juste voir le topic
+		if (ch->topic.empty())
+			numeric_331(c, channel_name, fds, index); // Pas de topic
+		else
+			numeric_332(c, channel_name, ch->topic, fds, index); // Topic actuel
+		return;
+	}
+	if (ch->isTopicProtected() && !ch->isOperator(c))
+	 {
+		numeric_482(c, channel_name, fds, index); // Pas le droit de changer le topic
+		return;
+	}
+	ch->topic = new_topic;
+	std::string topic_msg = ":" + c->nick + "!" + c->user +
+				" TOPIC " + channel_name + " :" + new_topic;
+	ch->broadcast(NULL, topic_msg, fds, index);
+}
+
 void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd *fds, int &nfds)
 {
 	std::istringstream iss(line);
@@ -260,9 +348,82 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 		std::string token; iss >> token;
 		c->queue_send("PONG :" + token + "\r\n", fds, index);
 	}
-	else {
-		numeric_421(c, cmd, fds, index);
+	else if (cmd == "KICK")
+	{
+		if (!c->pass_ok && !password.empty())
+		{
+			numeric_464(c, fds, index);
+			return ;
+		}
+		if (!c->authenticated)
+		{
+			numeric_464(c, fds, index);
+			return ;
+		}
+		std::string channel_name;
+		std::string target_nick;
+		std::string reason;
+		iss >> channel_name >> target_nick;
+		std::getline(iss, reason);
+		if (!reason.empty() && reason[0] == ' ') //enlever lespace initial 	
+			reason.erase(0, 1);					//qui reste au debut de reason
+		if (channel_name.empty() || target_nick.empty())
+		{
+			numeric_461(c, cmd, fds, index);
+			return ;
+		}
+		command_KICK(c, channel_name, target_nick, reason, fds, index);
 	}
+	else if (cmd == "INVITE")
+	{
+		if (!c->pass_ok && !password.empty())
+		{
+			numeric_464(c, fds, index);
+			return;
+		}
+		if (!c->authenticated)
+		{
+			numeric_451(c, fds, index);
+			return;
+		}
+		std::string target_nick;
+		std::string channel_name;
+		iss >> target_nick >> channel_name;
+		if (target_nick.empty() || channel_name.empty())
+		{
+			numeric_461(c, cmd, fds, index);
+			return;
+		}
+		command_INVITE(c, target_nick, channel_name, fds, index);
+	}
+	else if (cmd == "TOPIC")
+	{
+		if (!c->pass_ok && !password.empty())
+		{
+			numeric_464(c, fds, index); 
+			return;
+		}
+		if (!c->authenticated)
+		{
+			numeric_451(c, fds, index);
+			return;
+		}
+		std::string channel_name;
+		std::string new_topic;
+		iss >> channel_name;
+		std::getline(iss, new_topic);
+		if (!new_topic.empty() && new_topic[0] == ' ')
+			new_topic.erase(0, 1);
+
+		if (channel_name.empty())
+		{
+			numeric_461(c, cmd, fds, index);
+			return;
+		}
+		command_TOPIC(c, channel_name, new_topic, fds, index);
+	}
+	else 
+		numeric_421(c, cmd, fds, index);
 }
 
 void Server::tchek_listen(int &nfds, struct pollfd *fds){

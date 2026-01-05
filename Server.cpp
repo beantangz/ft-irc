@@ -227,8 +227,8 @@ void Server::command_INVITE(Client* inviter, const std::string& target_nick,
 	}
 	if (ch->isInviteOnly())
 		ch->addInvitation(target);
-	std::string invite_msg = ":" + inviter->nick + "!" + inviter->user +
-							 " INVITE " + target_nick + " :" + channel_name;
+	std::string prefix = ":" + inviter->nick + "!" + inviter->user + "@" + inviter->host;
+	std::string invite_msg = prefix + " INVITE " + target->nick + " :" + channel_name + "\r\n";
 	target->queue_send(invite_msg, fds, index);
 }
 void Server::command_TOPIC(Client* c, const std::string& channel_name,

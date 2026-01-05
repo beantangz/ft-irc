@@ -87,18 +87,25 @@ void Server::command_NICK(Client *c, std::string &nickname, struct pollfd *fds, 
 }
 
 
-void Server::command_JOIN(Client *c, std::string channel_name, int index, struct pollfd *fds, int nfds){
-		Channel* ch = find_channel(channel_name);
-		if (!ch) {
-			send_numeric(c, "ft_irc", 476, c->nick, "Bad channel mask", fds, index);
+void Server::command_JOIN(Client *c, std::string channel_name, int index, struct pollfd *fds, int nfds) {
+    Channel* ch = find_channel(channel_name);
+    if (!ch)
+	{
+		send_numeric(c, "ft_irc", 476, c->nick, "Bad channel mask", fds, index);
 		return;
-		}
-		ch->add_client(c);
-		c->channels.push_back(ch);
-
-		std::string join_msg = ":" + c->nick + " JOIN :" + channel_name + "\r\n";
-		ch->broadcast(c, join_msg, fds, index, nfds);
+	}
+	if (ch->isInviteOnly() && !ch->isInvited(c))
+	{
+		send_numeric(c, "ft_irc", 473, c->nick, channel_name + " :Cannot join channel (+i)", fds, index);
+		return;
+	}
+	ch->add_client(c);
+	
+	c->channels.push_back(ch);
+	std::string join_msg = ":" + c->nick + " JOIN :" + channel_name + "\r\n";
+	ch->broadcast(c, join_msg, fds, index, nfds);
 }
+
 
 void Server::command_PRIVMSG(Client *c, std::string &target, std::string &msg, struct pollfd *fds, int index, int nfds){
 	if (target[0] == '#') {
@@ -344,10 +351,20 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 		}
 		command_PRIVMSG(c, target, msg, fds, index, nfds);
 	}
-	else if (cmd == "PING") {
-		std::string token; iss >> token;
-		c->queue_send("PONG :" + token + "\r\n", fds, index);
-	}
+	else if (cmd == "PING")
+{
+    std::string token;
+    iss >> token;
+
+    // Toujours répondre PONG d'abord
+    if (!token.empty())
+        c->queue_send("PONG :" + token + "\r\n", fds, index);
+
+    // DEBUG des channels existants
+    for (size_t i = 0; i < channels.size(); ++i)
+        channels[i]->debug_print();
+}
+
 	else if (cmd == "KICK")
 	{
 		if (!c->pass_ok && !password.empty())

@@ -38,7 +38,7 @@ public:
 	void remove_client(Client *c);
 	void broadcast(Client *from, const std::string &msg, 
 		struct pollfd *fds, int index, int nfds);
-	
+	void debug_print() const;
 };
 
 // =======MODE +o -o ====== //val
@@ -47,7 +47,7 @@ public:
 // premier user du channel est automatiquement op  
 // verif isOperator(c) avant un MODE +o -o
 
-//=====MODE +i -i //val
+//=====MODE +i -i //val  pb on peut rejoindre meme enb +i
 //Channel devient prive seuls les users invite peubent le rejoindre
 //le bool invite_only devient true
 // Quand un user tente de JOIN un channel +i:

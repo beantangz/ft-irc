@@ -47,7 +47,7 @@ public:
 // premier user du channel est automatiquement op  
 // verif isOperator(c) avant un MODE +o -o
 
-//=====MODE +i -i
+//=====MODE +i -i //bean
 //Channel devient prive seuls les users invite peubent le rejoindre
 //le bool invite_only devient true
 // Quand un user tente de JOIN un channel +i:
@@ -65,7 +65,7 @@ public:
 // Sil ne les pas et que topic_op_only est actif renvoyer mess derreur 482 Youre not channel operator
 
 
-//======MODE +k -k
+//======MODE +k -k //bean
 //Channel key (mdp)
 //Channel protege par un mdp
 //stockee dans bool has_key;

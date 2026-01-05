@@ -2,7 +2,7 @@
 #include <iostream>
 #include <unistd.h>
 
-Client::Client(int fd_) : fd(fd_), authenticated(false) , pass_ok(false){}
+Client::Client(int fd_, const std::string& host_ip) : fd(fd_), host(host_ip), authenticated(false) , pass_ok(false){}
 
 Client::~Client() {}
 

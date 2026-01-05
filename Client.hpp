@@ -8,6 +8,7 @@ public:
 	int				 fd;
 	std::string		 nick;
 	std::string		 user;
+	std::string		 host;
 
 	std::string		recv_buffer;
 	std::string		send_buffer;
@@ -16,7 +17,7 @@ public:
 	bool				authenticated;
 	bool				pass_ok;
 
-	Client(int fd_);
+	Client(int fd_, const std::string& host_ip);
 	~Client();
 
 	int recv_data();

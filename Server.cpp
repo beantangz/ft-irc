@@ -89,25 +89,38 @@ void Server::command_NICK(Client *c, std::string &nickname, struct pollfd *fds, 
 
 void Server::command_JOIN(Client *c, std::string channel_name, int index, struct pollfd *fds, int nfds) {
     Channel* ch = find_channel(channel_name);
-    if (!ch)
+    if (!ch) {
+        send_numeric(c, "ft_irc", 476, c->nick, "Bad channel mask", fds, index);
+        return;
+    }
+	std::cout << ch->isInviteOnly() << " " << ch->isInvited(c) << std::endl; 
+    if (ch->isInviteOnly() && !ch->isInvited(c)) 
 	{
-		send_numeric(c, "ft_irc", 476, c->nick, "Bad channel mask", fds, index);
-		return;
-	}
-	if (ch->isInviteOnly() && !ch->isInvited(c))
+        send_numeric(c, "ft_irc", 473, c->nick, channel_name + " :Cannot join channel (+i)", fds, index);
+        return;
+    }
+
+    ch->add_client(c);
+    c->channels.push_back(ch);
+
+	//si le client est invite on le tej de la liste des invite !!! ahah
+	  if (ch->isInvited(c))
 	{
-		send_numeric(c, "ft_irc", 473, c->nick, channel_name + " :Cannot join channel (+i)", fds, index);
-		return;
-	}
-	ch->add_client(c);
-	
-	c->channels.push_back(ch);
-	std::string join_msg = ":" + c->nick + " JOIN :" + channel_name + "\r\n";
-	ch->broadcast(c, join_msg, fds, index, nfds);
+        ch->invited_clients.erase(
+            std::remove(ch->invited_clients.begin(), ch->invited_clients.end(), c),
+            ch->invited_clients.end()
+        );
+    }
+    std::string prefix = ":" + c->nick + "!" + c->user + "@" + c->host;
+    std::string join_msg = prefix + " JOIN :" + channel_name + "\r\n";
+    ch->broadcast(c, join_msg, fds, index, nfds);
 }
 
 
+
 void Server::command_PRIVMSG(Client *c, std::string &target, std::string &msg, struct pollfd *fds, int index, int nfds){
+	std::string prefix = ":" + c->nick + "!" + c->user + "@" + c->host;
+
 	if (target[0] == '#') {
 		Channel* ch = NULL;
 	for (size_t i = 0; i < channels.size(); ++i) {
@@ -120,14 +133,14 @@ void Server::command_PRIVMSG(Client *c, std::string &target, std::string &msg, s
 			numeric_403(c, target, fds, index); // No such channel
 			return;
 		}
-		ch->broadcast(c, ":" + c->nick + " PRIVMSG " + target + " :" + msg + "\r\n", fds, index, nfds);
+		ch->broadcast(c, prefix + " PRIVMSG " + target + " :" + msg + "\r\n", fds, index, nfds);
 	} else {
 		Client* dest = find_client_by_nick(target);
 		if (!dest) {
 			numeric_401(c, target, fds, index);
 			return;
 		}
-		dest->queue_send(":" + c->nick + " PRIVMSG " + target + " :" + msg + "\r\n", fds, index);
+		dest->queue_send(prefix + " PRIVMSG " + target + " :" + msg + "\r\n", fds, index);
 	}
 }
 
@@ -183,15 +196,29 @@ void Server::command_KICK(Client* kicker, const std::string& channel_name,
 		return ;
 	}
 	Client* target = find_client_by_nick(target_nick);
-	if (!target || !ch->has_client(kicker))
+	if (!target)
+	{
+		numeric_401(kicker, target_nick, fds, index); // No such nick
+		return;
+	}
+	if (!ch->has_client(kicker))
+	{
+		numeric_442(kicker, channel_name, fds, index); // You're not on that channel
+		return;
+	}
+	if (!ch->has_client(target))
 	{
 		numeric_441(kicker, target_nick, channel_name, fds, index);
-		return ;
+		return;
 	}
-	std::string kick_msg = ":" + kicker->nick + "!"+ kicker->user +" KICK " + channel_name + " " + target_nick;
+	std::string prefix = ":" + kicker->nick + "!" + kicker->user + "@" + kicker->host;
+	std::string kick_msg = prefix + " KICK " + channel_name + " " + target_nick;
+
 	if (!reason.empty())
 		kick_msg += " :" + reason;
+	kick_msg += "\r\n";
 	ch->broadcast(kicker, kick_msg, fds, index, nfds);
+	target->queue_send(kick_msg, fds, index);
 	ch->remove_client(target);
 }
 void Server::command_INVITE(Client* inviter, const std::string& target_nick,
@@ -250,8 +277,8 @@ void Server::command_TOPIC(Client* c, const std::string& channel_name,
 		return;
 	}
 	ch->topic = new_topic;
-	std::string topic_msg = ":" + c->nick + "!" + c->user +
-				" TOPIC " + channel_name + " :" + new_topic;
+	std::string prefix = ":" + c->nick + "!" + c->user + "@" + c->host;
+	std::string topic_msg = prefix + " TOPIC " + channel_name + " :" + new_topic;
 	ch->broadcast(NULL, topic_msg, fds, index, nfds);
 }
 
@@ -374,7 +401,7 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 		}
 		if (!c->authenticated)
 		{
-			numeric_464(c, fds, index);
+			numeric_451(c, fds, index);
 			return ;
 		}
 		std::string channel_name;
@@ -458,9 +485,13 @@ void Server::tchek_listen(int &nfds, struct pollfd *fds){
 				return;
 			}
 			else {
-				std::cout << "Nouveau client connecté: fd=" << client_fd << std::endl;
+					char ip_str[INET_ADDRSTRLEN];
+					inet_ntop(AF_INET, &client_addr.sin_addr, ip_str, INET_ADDRSTRLEN);
 
-				Client *c = new Client(client_fd);
+					std::cout << "Nouveau client connecté: fd=" << client_fd
+					<< ", IP=" << ip_str << std::endl;
+
+				Client *c = new Client(client_fd, ip_str);
 				clients.push_back(c);
 
 				fds[nfds].fd = client_fd;

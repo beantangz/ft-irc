@@ -48,6 +48,7 @@ public:
 // verif isOperator(c) avant un MODE +o -o
 
 //=====MODE +i -i //val  pb on peut rejoindre meme enb +i
+//=====MODE +i -i //bean
 //Channel devient prive seuls les users invite peubent le rejoindre
 //le bool invite_only devient true
 // Quand un user tente de JOIN un channel +i:

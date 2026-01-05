@@ -41,13 +41,13 @@ public:
 	
 };
 
-// =======MODE +o -o ======
+// =======MODE +o -o ====== //val
 // donne ou retire statu op a un client 
 // seul un op peut donner ou retirer des droits
 // premier user du channel est automatiquement op  
 // verif isOperator(c) avant un MODE +o -o
 
-//=====MODE +i -i
+//=====MODE +i -i //val
 //Channel devient prive seuls les users invite peubent le rejoindre
 //le bool invite_only devient true
 // Quand un user tente de JOIN un channel +i:
@@ -55,7 +55,7 @@ public:
 //Sil ny est pas envoyer le messsage derreur 473 cannot join channel
 
 
-//=======MODE +t -t 
+//=======MODE +t -t  //bean
 //Topic operator only
 //Seuls les operateurs peuvent changer le topic du channel
 //changer le bool topic_only
@@ -65,7 +65,7 @@ public:
 // Sil ne les pas et que topic_op_only est actif renvoyer mess derreur 482 Youre not channel operator
 
 
-//======MODE +k -k
+//======MODE +k -k //bean
 //Channel key (mdp)
 //Channel protege par un mdp
 //stockee dans bool has_key;

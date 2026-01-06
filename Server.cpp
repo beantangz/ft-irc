@@ -249,10 +249,10 @@ void Server::command_KICK(Client* kicker, const std::string& channel_name,
 	if (!reason.empty())
 		kick_msg += " :" + reason;
 	kick_msg += "\r\n";
-	ch->broadcast(kicker, kick_msg, fds, index, nfds);
-	target->queue_send(kick_msg, fds, index);
+	ch->broadcast(NULL, kick_msg, fds, index, nfds);
 	ch->remove_client(target);
 }
+
 void Server::command_INVITE(Client* inviter, const std::string& target_nick,
 	const std::string& channel_name, struct pollfd* fds, int index)
 {

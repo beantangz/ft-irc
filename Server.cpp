@@ -103,37 +103,34 @@ void Server::command_JOIN(Client *c, std::string channel_name, int index, struct
 
 	// std::cout << "ahahahahah" << std::endl;
 	// if (ch && ch->has_client(c))
-    // return;
-	std::cout << "miaoumiaoumiaou" << std::endl;
+	// return;
 	if (!ch)
 	{
-    	ch = new Channel(channel_name);
-    	channels.push_back(ch);
+		ch = new Channel(channel_name);
+		channels.push_back(ch);
 	}
-    if ( ch && ch->isInviteOnly() && !ch->isInvited(c)) 
+	if ( ch && ch->isInviteOnly() && !ch->isInvited(c)) 
 	{
 		std::cout << "sperm" << std::endl;
-        send_numeric(c, "ft_irc", 473, c->nick, channel_name + " :Cannot join channel (+i)", fds, index);
-        return;
-    }
-	
-	
+		send_numeric(c, "ft_irc", 473, c->nick, channel_name + " :Cannot join channel (+i)", fds, index);
+		return;
+	}
 	std::cout << "avant addclient" << std::endl;
 	if (!ch->has_client(c))
-    	ch->add_client(c);
-    // c->channels.push_back(ch);
+		ch->add_client(c);
+	// c->channels.push_back(ch);
 
 	//si le client est invite on le tej de la liste des invite !!! ahah
-	  if (ch->isInvited(c))
+	if (ch->isInvited(c))
 	{
-        ch->invited_clients.erase(
-            std::remove(ch->invited_clients.begin(), ch->invited_clients.end(), c),
-            ch->invited_clients.end()
-        );
-    }
-    std::string prefix = ":" + c->nick + "!" + c->user + "@" + c->host;
-    std::string join_msg = prefix + " JOIN :" + channel_name + "\r\n";
-    ch->broadcast(c, join_msg, fds, index, nfds);
+		ch->invited_clients.erase(
+			std::remove(ch->invited_clients.begin(), ch->invited_clients.end(), c),
+			ch->invited_clients.end()
+		);
+	}
+	std::string prefix = ":" + c->nick + "!" + c->user + "@" + c->host;
+	std::string join_msg = prefix + " JOIN :" + channel_name + "\r\n";
+	ch->broadcast(c, join_msg, fds, index, nfds);
 }
 
 
@@ -157,12 +154,12 @@ void Server::command_PRIVMSG(Client *c, std::string &target, std::string &msg, s
 			return;
 		}
 		if (!ch->has_client(c))  // on verif si le client est dans le channel pour voir sil peut louvrir
-        {
-            send_numeric(c, "ft_irc", 442, c->nick,
-                target + " :You're not on that channel",
-                fds, index);
-            return;
-        }
+		{
+			send_numeric(c, "ft_irc", 442, c->nick,
+				target + " :You're not on that channel",
+				fds, index);
+			return;
+		}
 		ch->broadcast(c, prefix + " PRIVMSG " + target + " :" + msg + "\r\n", fds, index, nfds);
 	} 
 	else 
@@ -367,10 +364,10 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 	}
 	else if (cmd == "JOIN")
 	{
-	 	if (!channels.empty() && channels[0])
+		if (!channels.empty() && channels[0])
 		{
-        	std::cout << channels[0]->invite_only << std::endl;
-    	}
+			std::cout << channels[0]->invite_only << std::endl;
+		}
 		if (!c->authenticated) 
 		{
 			numeric_451(c, fds, index);
@@ -419,16 +416,16 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 	}
 	else if (cmd == "PING")
 {
-    std::string token;
-    iss >> token;
+	std::string token;
+	iss >> token;
 
-    // Toujours répondre PONG d'abord
-    if (!token.empty())
-        c->queue_send("PONG :" + token + "\r\n", fds, index);
+	// Toujours répondre PONG d'abord
+	if (!token.empty())
+		c->queue_send("PONG :" + token + "\r\n", fds, index);
 
-    // DEBUG des channels existants
-    for (size_t i = 0; i < channels.size(); ++i)
-        channels[i]->debug_print();
+	// DEBUG des channels existants
+	for (size_t i = 0; i < channels.size(); ++i)
+		channels[i]->debug_print();
 }
 
 	else if (cmd == "KICK")

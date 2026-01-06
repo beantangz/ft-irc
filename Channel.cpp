@@ -75,11 +75,12 @@ void Channel::broadcast(Client *from, const std::string &msg, struct pollfd *fds
 	for (size_t i = 0; i < clients.size(); ++i)
 	{
 		Client *c = clients[i];
-		if (c != from)
-		{
-			int idx = find_index_in_fds(c->fd, fds, nfds);
-			c->queue_send(msg, fds, idx);
-		}
+		if (from && c == from)
+			continue;
+		int idx = find_index_in_fds(c->fd, fds, nfds);
+		if (idx < 0)
+			continue;
+		c->queue_send(msg, fds, idx);
 	}
 }
 

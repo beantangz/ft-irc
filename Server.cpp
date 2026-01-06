@@ -86,38 +86,87 @@ void Server::command_NICK(Client *c, std::string &nickname, struct pollfd *fds, 
 	c->nick = nickname;
 }
 
-
-void Server::command_JOIN(Client *c, std::string channel_name, int index, struct pollfd *fds, int nfds){
-		Channel* ch = find_channel(channel_name);
-		if (!ch) {
-			send_numeric(c, "ft_irc", 476, c->nick, "Bad channel mask", fds, index);
-		return;
-		}
-		ch->add_client(c);
-		c->channels.push_back(ch);
-
-		std::string prefix = ":" + c->nick + "!" + c->user + "@" + c->host;
-		std::string join_msg = prefix + " JOIN :" + channel_name + "\r\n";
-		ch->broadcast(c, join_msg, fds, index, nfds);
+Channel* Server::get_channel(const std::string &name)
+{
+	for (size_t i = 0; i < channels.size(); i++)
+	{
+		if (channels[i]->name == name)
+			return (channels[i]);
+	}
+	return NULL;
 }
+
+void Server::command_JOIN(Client *c, std::string channel_name, int index, struct pollfd *fds, int nfds)
+{
+
+	Channel* ch = get_channel(channel_name);
+
+	// std::cout << "ahahahahah" << std::endl;
+	// if (ch && ch->has_client(c))
+    // return;
+	std::cout << "miaoumiaoumiaou" << std::endl;
+	if (!ch)
+	{
+    	ch = new Channel(channel_name);
+    	channels.push_back(ch);
+	}
+    if ( ch && ch->isInviteOnly() && !ch->isInvited(c)) 
+	{
+		std::cout << "sperm" << std::endl;
+        send_numeric(c, "ft_irc", 473, c->nick, channel_name + " :Cannot join channel (+i)", fds, index);
+        return;
+    }
+	
+	
+	std::cout << "avant addclient" << std::endl;
+	if (!ch->has_client(c))
+    	ch->add_client(c);
+    // c->channels.push_back(ch);
+
+	//si le client est invite on le tej de la liste des invite !!! ahah
+	  if (ch->isInvited(c))
+	{
+        ch->invited_clients.erase(
+            std::remove(ch->invited_clients.begin(), ch->invited_clients.end(), c),
+            ch->invited_clients.end()
+        );
+    }
+    std::string prefix = ":" + c->nick + "!" + c->user + "@" + c->host;
+    std::string join_msg = prefix + " JOIN :" + channel_name + "\r\n";
+    ch->broadcast(c, join_msg, fds, index, nfds);
+}
+
+
 
 void Server::command_PRIVMSG(Client *c, std::string &target, std::string &msg, struct pollfd *fds, int index, int nfds){
 	std::string prefix = ":" + c->nick + "!" + c->user + "@" + c->host;
 
-	if (target[0] == '#') {
+	if (target[0] == '#') 
+	{
 		Channel* ch = NULL;
-	for (size_t i = 0; i < channels.size(); ++i) {
-	if (channels[i]->name == target) {
-		ch = channels[i];
-		break;
-	}
-}
+		for (size_t i = 0; i < channels.size(); ++i)
+		{
+			if (channels[i]->name == target)
+			{
+				ch = channels[i];
+				break;
+			}
+		}
 		if (!ch) {
 			numeric_403(c, target, fds, index); // No such channel
 			return;
 		}
+		if (!ch->has_client(c))  // on verif si le client est dans le channel pour voir sil peut louvrir
+        {
+            send_numeric(c, "ft_irc", 442, c->nick,
+                target + " :You're not on that channel",
+                fds, index);
+            return;
+        }
 		ch->broadcast(c, prefix + " PRIVMSG " + target + " :" + msg + "\r\n", fds, index, nfds);
-	} else {
+	} 
+	else 
+	{
 		Client* dest = find_client_by_nick(target);
 		if (!dest) {
 			numeric_401(c, target, fds, index);
@@ -316,16 +365,23 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 		register_client(c, fds, index);
 		}
 	}
-	else if (cmd == "JOIN") {
-		if (!c->authenticated) {
+	else if (cmd == "JOIN")
+	{
+	 	if (!channels.empty() && channels[0])
+		{
+        	std::cout << channels[0]->invite_only << std::endl;
+    	}
+		if (!c->authenticated) 
+		{
 			numeric_451(c, fds, index);
 			return;
-			}
+		}
 		std::string channel_name;
 		iss >> channel_name;
-		if (channel_name.empty()) {
-		numeric_461(c, cmd, fds, index);
-		return;
+		if (channel_name.empty())
+		{
+			numeric_461(c, cmd, fds, index);
+			return;
 		}
 		command_JOIN(c, channel_name,index, fds, nfds);
 	}
@@ -361,10 +417,20 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 		}
 		command_PRIVMSG(c, target, msg, fds, index, nfds);
 	}
-	else if (cmd == "PING") {
-		std::string token; iss >> token;
-		c->queue_send("PONG :" + token + "\r\n", fds, index);
-	}
+	else if (cmd == "PING")
+{
+    std::string token;
+    iss >> token;
+
+    // Toujours répondre PONG d'abord
+    if (!token.empty())
+        c->queue_send("PONG :" + token + "\r\n", fds, index);
+
+    // DEBUG des channels existants
+    for (size_t i = 0; i < channels.size(); ++i)
+        channels[i]->debug_print();
+}
+
 	else if (cmd == "KICK")
 	{
 		if (!c->pass_ok && !password.empty())

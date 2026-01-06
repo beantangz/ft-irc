@@ -1,6 +1,14 @@
 #include "irc.hpp"
 #include <algorithm>
-
+#include <string>
+#include <vector>
+#include <map>
+#include <netinet/in.h>
+#include <poll.h>
+#include <unistd.h>
+#include <algorithm>
+#include <sstream>
+#include <iostream>
 
 Channel::Channel(const std::string &name_)
 	: name(name_),
@@ -126,4 +134,22 @@ void Channel::removeOperator(Client *c)
 			return ;
 		}
 	}
+}
+
+
+void Channel::debug_print() const
+{
+    std::cout << "=== Channel: " << name << " ===" << std::endl;
+
+    std::cout << "Clients: ";
+    for (size_t i = 0; i < clients.size(); ++i)
+        std::cout << clients[i]->nick << " ";
+    std::cout << std::endl;
+
+    std::cout << "Operators: ";
+    for (size_t i = 0; i < operators.size(); ++i)
+        std::cout << operators[i]->nick << " ";
+    std::cout << std::endl;
+
+    std::cout << "====================" << std::endl;
 }

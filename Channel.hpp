@@ -38,7 +38,7 @@ public:
 	void remove_client(Client *c);
 	void broadcast(Client *from, const std::string &msg, 
 		struct pollfd *fds, int index, int nfds);
-	
+	void debug_print() const;
 };
 
 // =======MODE +o -o ====== //val

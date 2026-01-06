@@ -48,6 +48,7 @@ public:
 					 const std::string &param, int index, struct pollfd *fds);
 	void	mode_limit(Client *c, Channel *ch, char sign,
 					   const std::string &param, int index, struct pollfd *fds);
+	Channel* get_channel(const std::string &name);
 
 
 	//commmands

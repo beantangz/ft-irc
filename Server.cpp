@@ -130,6 +130,7 @@ void Server::command_JOIN(Client *c, std::string channel_name, int index, struct
 	}
 	std::string prefix = ":" + c->nick + "!" + c->user + "@" + c->host;
 	std::string join_msg = prefix + " JOIN :" + channel_name + "\r\n";
+	//c->queue_send(join_msg, fds, index);
 	ch->broadcast(c, join_msg, fds, index, nfds);
 }
 

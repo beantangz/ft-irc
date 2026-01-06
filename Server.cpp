@@ -111,7 +111,6 @@ void Server::command_JOIN(Client *c, std::string channel_name, int index, struct
 	}
 	if ( ch && ch->isInviteOnly() && !ch->isInvited(c)) 
 	{
-		std::cout << "sperm" << std::endl;
 		send_numeric(c, "ft_irc", 473, c->nick, channel_name + " :Cannot join channel (+i)", fds, index);
 		return;
 	}
@@ -130,8 +129,21 @@ void Server::command_JOIN(Client *c, std::string channel_name, int index, struct
 	}
 	std::string prefix = ":" + c->nick + "!" + c->user + "@" + c->host;
 	std::string join_msg = prefix + " JOIN :" + channel_name + "\r\n";
-	//c->queue_send(join_msg, fds, index);
-	ch->broadcast(c, join_msg, fds, index, nfds);
+	ch->broadcast(NULL, join_msg, fds, index, nfds);
+
+	std::string names = ":ft_irc 353 " + c->nick + " = " + channel_name + " :";
+	for (size_t i = 0; i < ch->clients.size(); ++i)
+	{
+		if (ch->isOperator(ch->clients[i]))
+			names += "@";
+		names += ch->clients[i]->nick + " ";
+	}
+	names += "\r\n";
+	c->queue_send(names, fds, index);
+
+	std::string end = ":ft_irc 366 " + c->nick + " " + channel_name +
+				  " :End of /NAMES list.\r\n";
+	c->queue_send(end, fds, index);
 }
 
 
@@ -247,7 +259,10 @@ void Server::command_KICK(Client* kicker, const std::string& channel_name,
 	if (!reason.empty())
 		kick_msg += " :" + reason;
 	kick_msg += "\r\n";
+
 	ch->broadcast(NULL, kick_msg, fds, index, nfds);
+
+
 	ch->remove_client(target);
 }
 

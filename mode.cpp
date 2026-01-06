@@ -1,7 +1,7 @@
 #include "Server.hpp"
 #include "Channel.hpp"
 #include "errors.hpp"
-
+#include <iostream>
 //target = nom du channel
 Channel* Server::check_error_mode(Client *c, const std::string &target,struct pollfd *fds,
 								  int index)
@@ -59,9 +59,15 @@ void Server::mode_operator(Client *c, Channel *ch, char sign, const std::string 
 void Server::mode_invite_only(Client *c, Channel *ch, char sign, int index, struct pollfd *fds)
 {
 	if (sign == '+')
+	{
 		ch->invite_only = true;
+		std::cout << "invite only = true" << std::endl;
+	}
 	else if (sign == '-')
+	{
 		ch->invite_only = false;
+		std::cout << "invite only = false" << std::endl;
+	}
 	else
 	{
 		numeric_472(c, "i", fds, index);

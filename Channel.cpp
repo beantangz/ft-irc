@@ -135,6 +135,8 @@ void Channel::removeOperator(Client *c)
 		}
 	}
 }
+
+
 void Channel::debug_print() const
 {
     std::cout << "=== Channel: " << name << " ===" << std::endl;

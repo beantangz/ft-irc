@@ -1,7 +1,8 @@
 #include "irc.hpp"
 #include <iostream>
 
-int main(int ac, char **av){
+int main(int ac, char **av)
+{
 	if (ac != 3 && ac != 2)
 	{
 		std::cout << "invalid format\n";

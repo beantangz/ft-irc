@@ -326,7 +326,7 @@ void Server::command_TOPIC(Client* c, const std::string& channel_name,
 	}
 	ch->topic = new_topic;
 	std::string prefix = ":" + c->nick + "!" + c->user + "@" + c->host;
-	std::string topic_msg = prefix + " TOPIC " + channel_name + " :" + new_topic;
+	std::string topic_msg = prefix + " TOPIC " + channel_name + " :" + new_topic + "\r\n";
 	ch->broadcast(NULL, topic_msg, fds, index, nfds);
 }
 

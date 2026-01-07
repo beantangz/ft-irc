@@ -51,7 +51,7 @@ public:
 	Channel* get_channel(const std::string &name);
 
 	std::string get_join_key(const std::string &line, const std::string &channel_name);
-	
+
 	//commmands
 	void command_TOPIC(Client* c, const std::string& channel_name,
                            const std::string& new_topic,struct pollfd* fds, int index, int nfds);
@@ -63,6 +63,6 @@ public:
 	void command_MODE(Client *c, std::string target, std::string mode,
 		 std::string param, int index, struct pollfd *fds, int nfds);
 	void command_NICK(Client *c, std::string &nickname, struct pollfd *fds, int index);
-	void command_JOIN(Client *c, std::string channel_name, int index, struct pollfd *fds, int nfds, const std::string &full_line);
+	void command_JOIN(Client *c, std::string channel_name, int index, struct pollfd *fds, int nfds, const std::string &full_line, const std::string &key_from_user);
 	void command_PRIVMSG(Client *c, std::string &target, std::string &msg, struct pollfd *fds, int index, int nfds);
 };

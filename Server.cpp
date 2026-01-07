@@ -113,9 +113,9 @@ std::string Server::get_join_key(const std::string &line, const std::string &cha
 	return key;
 }
 void Server::command_JOIN(Client *c, std::string channel_name, int index, struct pollfd *fds, int nfds,
-	 const std::string &full_line)
+	 const std::string &full_line, const std::string &key_from_user)
 {
-
+	(void)full_line;
 	Channel* ch = get_channel(channel_name);
 
 	if ( ch && ch->isInviteOnly() && !ch->isInvited(c)) 
@@ -132,19 +132,14 @@ void Server::command_JOIN(Client *c, std::string channel_name, int index, struct
 		channels.push_back(ch);
 	}
 	
-	std::cout<< "Full line = " << full_line << std::endl;
-	if (ch->has_key)
-	{
-		std::cout << "key mode activated" << std::endl;
-		std::string key_from_user = get_join_key(full_line, channel_name);
-		std::cout << "Key from user: " << std::endl;
-		std::cout << "Key enregistre dans le channel : " << ch->key;
-		if (key_from_user != ch->key)
-		{
-			send_numeric(c, "ft_irc", 475, c->nick, channel_name + " :Cannot join channel (+k)", fds, index);
-            return;
-		}
-	}
+	// std::cout<< "Full line = " << full_line << std::endl;
+  if (ch->has_key && key_from_user != ch->key)
+  {
+        send_numeric(c, "ft_irc", 475, c->nick,
+				channel_name + " :Cannot join channel (+k)",
+				 fds, index);
+        return;
+    }
 	if (!ch->has_client(c))
 		ch->add_client(c);
 	if (ch->isInvited(c))
@@ -417,13 +412,16 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 			return;
 		}
 		std::string channel_name;
+		std::string key;
 		iss >> channel_name;
+		iss >> key;
+
 		if (channel_name.empty())
 		{
 			numeric_461(c, cmd, fds, index);
 			return;
 		}
-		command_JOIN(c, channel_name,index, fds, nfds, line);
+		command_JOIN(c, channel_name,index, fds, nfds, line, key);
 	}
 	else if (cmd == "MODE")
 	{

@@ -125,11 +125,12 @@ void Server::command_JOIN(Client *c, std::string channel_name, int index, struct
 	}
 
 	if (ch->has_limit && (int)ch->clients.size() >= ch->user_limit) {
-		send_numeric(c, "ft_irc", 471, c->nick, channel_name + " :Cannot join channel (+l)", fds, index);
+		std::string msg = ":ft_irc 471 " + c->nick + " " + channel_name + " :Cannot join channel (+l)\r\n";
+		c->queue_send(msg, fds, index);
 		return;
-}
+	}
 
-	if ( ch && ch->isInviteOnly() && !ch->isInvited(c)) 
+	if (ch->isInviteOnly() && !ch->isInvited(c)) 
 	{
 		std::string msg = ":ft_irc 473 " + c->nick + " " + channel_name + " :Cannot join channel (+i)\r\n";
 		c->queue_send(msg, fds, index);
@@ -376,6 +377,8 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 	std::cout << line << std::endl << std::flush;
 
 	if (cmd == "CAP")
+		return;
+	if (cmd == "WHOIS")
 		return;
 	if (cmd == "PASS") {
 		std::string pass;

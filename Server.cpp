@@ -118,28 +118,29 @@ void Server::command_JOIN(Client *c, std::string channel_name, int index, struct
 	(void)full_line;
 	Channel* ch = get_channel(channel_name);
 
-	if ( ch && ch->isInviteOnly() && !ch->isInvited(c)) 
-	{
-		std::string msg = ":ft_irc 473 " + c->nick + " " +
-                      channel_name + " :Cannot join channel (+i)\r\n";
-        c->queue_send(msg, fds, index);
-        return;
-	}
-
-	if (!ch)
+    if (ch)
+    {
+		// +i
+		if (ch->invite_only && !ch->isInvited(c))
+		{
+			send_numeric(c, "ft_irc", 473, c->nick,
+				channel_name + " :Cannot join channel (+i)",
+				fds, index);
+				return;
+		}
+        // +k
+		if (ch->has_key && key_from_user != ch->key)
+		{
+		  send_numeric_475(c, "ft_irc", channel_name, fds, index);
+        	return;
+		}
+    }
+	else
 	{
 		ch = new Channel(channel_name);
 		channels.push_back(ch);
 	}
-	
-	// std::cout<< "Full line = " << full_line << std::endl;
-  if (ch->has_key && key_from_user != ch->key)
-  {
-        send_numeric(c, "ft_irc", 475, c->nick,
-				channel_name + " :Cannot join channel (+k)",
-				 fds, index);
-        return;
-    }
+
 	if (!ch->has_client(c))
 		ch->add_client(c);
 	if (ch->isInvited(c))

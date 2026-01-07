@@ -3,6 +3,22 @@
 #include "errors.hpp"
 #include <iostream>
 //target = nom du channel
+
+
+
+
+//pour le +k
+void Server::send_numeric_475(Client* c, const std::string& server_name,
+                              const std::string& channel, struct pollfd* fds, int index)
+{
+    std::ostringstream oss;
+    oss << ":" << server_name << " 475 " 
+        << c->nick << " " 
+        << channel << " "
+        << ":Cannot join channel (+k)\r\n";
+    c->queue_send(oss.str(), fds, index);
+}
+
 Channel* Server::check_error_mode(Client *c, const std::string &target,struct pollfd *fds,
 								  int index)
 {
@@ -101,7 +117,7 @@ void Server::mode_topic_only(Client *c, Channel *ch, char sign, int index, struc
 }
 
 void Server::mode_key(Client *c, Channel *ch, char sign,
-					  const std::string &param, int index, struct pollfd *fds)
+					  const std::string &param, int index, struct pollfd *fds, int nfds)
 {
 	if (sign == '+')
 	{
@@ -123,9 +139,17 @@ void Server::mode_key(Client *c, Channel *ch, char sign,
 		numeric_472(c, "k", fds, index);
 		return ;
 	}
-	std::string msg = ":" + c->nick + " MODE " + ch->name + " " + sign + "k\r\n";
+	std::string msg = ":" + c->nick + " MODE " + ch->name + " " + sign + "k";
+	if (sign == '+')
+    	msg += " " + ch->key;
+	msg += "\r\n";
 	for (size_t i = 0; i < ch->clients.size(); i++)
-		ch->clients[i]->queue_send(msg, fds, index);
+	{
+    	Client* dest = ch->clients[i];
+    	int idx = find_index_in_fds(dest->fd, fds, nfds);
+    if (idx >= 0)
+        dest->queue_send(msg, fds, idx);
+	}
 }
 void Server::mode_limit(Client *c, Channel *ch, char sign,
 						const std::string &param, int index, struct pollfd *fds)
@@ -186,7 +210,7 @@ void Server::command_MODE(Client *c, const std::string target, std::string mode,
 	else if (m == 't')
 		mode_topic_only(c, ch, sign, index, fds);
 	else if (m == 'k')
-		mode_key(c, ch, sign, param, index, fds);
+		mode_key(c, ch, sign, param, index, fds, nfds);
 	else if (m == 'l')
 		mode_limit(c, ch, sign, param, index, fds);
 	else

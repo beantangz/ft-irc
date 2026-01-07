@@ -45,13 +45,15 @@ public:
 	void	mode_topic_only(Client *c, Channel *ch, char sign,
 							int index, struct pollfd *fds);
 	void	mode_key(Client *c, Channel *ch, char sign,
-					 const std::string &param, int index, struct pollfd *fds);
+					 const std::string &param, int index, struct pollfd *fds, int nfds);
 	void	mode_limit(Client *c, Channel *ch, char sign,
 					   const std::string &param, int index, struct pollfd *fds);
 	Channel* get_channel(const std::string &name);
 
 	std::string get_join_key(const std::string &line, const std::string &channel_name);
 
+	void send_numeric_475(Client* c, const std::string& server_name,
+                              const std::string& channel, struct pollfd* fds, int index);
 	//commmands
 	void command_TOPIC(Client* c, const std::string& channel_name,
                            const std::string& new_topic,struct pollfd* fds, int index, int nfds);

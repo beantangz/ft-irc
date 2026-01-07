@@ -270,7 +270,7 @@ void Server::command_KICK(Client* kicker, const std::string& channel_name,
 }
 
 void Server::command_INVITE(Client* inviter, const std::string& target_nick,
-	const std::string& channel_name, struct pollfd* fds, int index)
+	const std::string& channel_name, struct pollfd* fds, int index, int nfds)
 {
 	Channel* ch = find_channel(channel_name);
 	  if (!ch)
@@ -284,17 +284,31 @@ void Server::command_INVITE(Client* inviter, const std::string& target_nick,
 		numeric_401(inviter, target_nick, fds, index);
 		return;
 	}
+	if (ch->isInviteOnly() && !ch->isOperator(inviter))
+	{
+		numeric_482(inviter, channel_name, fds, index);
+		return;
+	}
+	if (ch->has_client(target))
+	{
+		numeric_443(inviter, target->nick, channel_name, fds, index);
+		return;
+	}
+
 	//Si le mec invite nest pas sur le channel de base
 	if (!ch->has_client(inviter))
 	{
 		numeric_442(inviter, channel_name, fds, index);
 		return;
 	}
-	if (ch->isInviteOnly())
-		ch->addInvitation(target);
 	std::string prefix = ":" + inviter->nick + "!" + inviter->user + "@" + inviter->host;
-	std::string invite_msg = prefix + " INVITE " + target->nick + " :" + channel_name + "\r\n";
-	target->queue_send(invite_msg, fds, index);
+	std::string invite_msg = prefix + " INVITE " + target->nick + " " + channel_name + "\r\n";
+
+	int target_idx = find_index_in_fds(target->fd, fds, nfds);
+	target->queue_send(invite_msg, fds, target_idx);
+	numeric_341(inviter, target->nick, channel_name, fds, index);
+
+	ch->addInvitation(target);
 }
 void Server::command_TOPIC(Client* c, const std::string& channel_name,
 						   const std::string& new_topic,struct pollfd* fds, int index, int nfds)
@@ -493,7 +507,7 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 			numeric_461(c, cmd, fds, index);
 			return;
 		}
-		command_INVITE(c, target_nick, channel_name, fds, index);
+		command_INVITE(c, target_nick, channel_name, fds, index, nfds);
 	}
 	else if (cmd == "TOPIC")
 	{
@@ -646,9 +660,5 @@ void Server::run() {
 		tchek_clients(nfds, fds);
 
 		tchek_clients_out(nfds, fds);
-
-		for (int i = 0; i < nfds; ++i) {
-			fds[i].revents = 0;
-		}
 	}
 }

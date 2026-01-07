@@ -77,17 +77,18 @@ void numeric_403(Client* c, const std::string& channel, struct pollfd *fds, int 
 }
 
 void numeric_421(Client* c, const std::string& cmd, struct pollfd *fds, int index) {
-	send_numeric(c, "ft_irc", 421, c->nick,
-		cmd + " :Unknown command",
-		fds, index);
+	send_numeric(c, "ft_irc", 421, c->nick, cmd + " :Unknown command", fds, index);
 }
 //kick
-void numeric_441(Client* c, const std::string& nick, const std::string& channel,
-				 struct pollfd *fds, int index) {
-	send_numeric(c, "ft_irc", 441, c->nick,
-		nick + " " + channel + " :They aren't on that channel",
-		fds, index);
+void numeric_441(Client* c, const std::string& nick, const std::string& channel, struct pollfd *fds, int index) {
+	send_numeric(c, "ft_irc", 441, c->nick, nick + " " + channel + " :They aren't on that channel", fds, index);
 }
+
+void numeric_443(Client* inviter, const std::string& target_nick, const std::string& channel_name, struct pollfd* fds, int index)
+{
+	send_numeric(inviter, "ft_irc", 443, inviter->nick + " " + target_nick + " " + channel_name, "is already on channel", fds, index);
+}
+
 
 void numeric_442(Client* c, const std::string& channel, struct pollfd *fds, int index) {
 	send_numeric(c, "ft_irc", 442, c->nick,

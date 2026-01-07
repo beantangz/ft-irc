@@ -141,15 +141,21 @@ void Server::command_JOIN(Client *c, std::string channel_name, int index, struct
 		channels.push_back(ch);
 	}
 
+	if (ch->has_limit && (int)ch->clients.size() >= ch->user_limit) {
+		std::string msg = ":ft_irc 471 " + c->nick + " " + channel_name + " :Cannot join channel (+l)\r\n";
+		c->queue_send(msg, fds, index);
+		return;
+	}
+
 	if (!ch->has_client(c))
 		ch->add_client(c);
 	if (ch->isInvited(c))
 	{
 		ch->invited_clients.erase(
 			std::remove(ch->invited_clients.begin(), ch->invited_clients.end(), c),
-			ch->invited_clients.end()
-		);
+			ch->invited_clients.end());
 	}
+
 	std::string prefix = ":" + c->nick + "!" + c->user + "@" + c->host;
 	std::string join_msg = prefix + " JOIN " + channel_name + "\r\n";
 	ch->broadcast(c, join_msg, fds, index, nfds);
@@ -374,6 +380,10 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 
 	std::cout << line << std::endl << std::flush;
 
+	if (cmd == "CAP")
+		return;
+	if (cmd == "WHOIS")
+		return;
 	if (cmd == "PASS") {
 		std::string pass;
 		iss >> pass;

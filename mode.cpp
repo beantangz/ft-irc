@@ -24,6 +24,12 @@ Channel* Server::check_error_mode(Client *c, const std::string &target,struct po
 {
 	if (target.empty() || target[0] != '#')
 	{
+		if (target[0] != '#'){
+			if (find_client_by_nick(target))
+				return NULL;
+			numeric_401(c, target, fds, index);
+			return NULL;
+		}
 		numeric_403(c, target, fds, index);
 		return NULL;
 	}
@@ -151,6 +157,7 @@ void Server::mode_key(Client *c, Channel *ch, char sign,
         dest->queue_send(msg, fds, idx);
 	}
 }
+
 void Server::mode_limit(Client *c, Channel *ch, char sign,
 						const std::string &param, int index, struct pollfd *fds)
 {
@@ -163,7 +170,7 @@ void Server::mode_limit(Client *c, Channel *ch, char sign,
 		}
 		int limit = 0;
 		std::istringstream iss(param);
-		if (!(iss >> limit || limit <= 0))
+		if (!(iss >> limit) || limit <= 0)
 		{
 			numeric_461(c, "MODE", fds, index);
 			return ;

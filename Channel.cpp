@@ -61,7 +61,8 @@ void Channel::remove_client(Client *c)
 		operators.push_back(clients[0]);
 }
 
-int find_index_in_fds(int fd, struct pollfd *fds, int nfds) {
+int find_index_in_fds(int fd, struct pollfd *fds, int nfds)
+ {
 	for(int i = 0; i < nfds; ++i) {
 	if (fds[i].fd == fd)
 		return i;

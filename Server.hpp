@@ -41,7 +41,7 @@ public:
 	void	mode_operator(Client *c, Channel *ch, char sign,
 						  const std::string &param, int index, struct pollfd *fds);
 	void	mode_invite_only(Client *c, Channel *ch, char sign,
-							 int index, struct pollfd *fds);
+							 int index, struct pollfd *fds, int nfds);
 	void	mode_topic_only(Client *c, Channel *ch, char sign,
 							int index, struct pollfd *fds);
 	void	mode_key(Client *c, Channel *ch, char sign,
@@ -60,7 +60,7 @@ public:
 	void command_INVITE(Client* inviter, const std::string& target_nick,
 	const std::string& channel_name, struct pollfd* fds, int index);
 	void command_MODE(Client *c, std::string target, std::string mode,
-		 std::string param, int index, struct pollfd *fds);
+		 std::string param, int index, struct pollfd *fds, int nfds);
 	void command_NICK(Client *c, std::string &nickname, struct pollfd *fds, int index);
 	void command_JOIN(Client *c, std::string channel_name, int index, struct pollfd *fds, int nfds);
 	void command_PRIVMSG(Client *c, std::string &target, std::string &msg, struct pollfd *fds, int index, int nfds);

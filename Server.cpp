@@ -104,16 +104,19 @@ void Server::command_JOIN(Client *c, std::string channel_name, int index, struct
 	// std::cout << "ahahahahah" << std::endl;
 	// if (ch && ch->has_client(c))
 	// return;
+	if ( ch && ch->isInviteOnly() && !ch->isInvited(c)) 
+	{
+		std::string msg = ":ft_irc 473 " + c->nick + " " +
+                      channel_name + " :Cannot join channel (+i)\r\n";
+        c->queue_send(msg, fds, index);
+        return;
+	}
 	if (!ch)
 	{
 		ch = new Channel(channel_name);
 		channels.push_back(ch);
 	}
-	if ( ch && ch->isInviteOnly() && !ch->isInvited(c)) 
-	{
-		send_numeric(c, "ft_irc", 473, c->nick, channel_name + " :Cannot join channel (+i)", fds, index);
-		return;
-	}
+
 	std::cout << "avant addclient" << std::endl;
 	if (!ch->has_client(c))
 		ch->add_client(c);
@@ -128,8 +131,8 @@ void Server::command_JOIN(Client *c, std::string channel_name, int index, struct
 		);
 	}
 	std::string prefix = ":" + c->nick + "!" + c->user + "@" + c->host;
-	std::string join_msg = prefix + " JOIN :" + channel_name + "\r\n";
-	ch->broadcast(NULL, join_msg, fds, index, nfds);
+	std::string join_msg = prefix + " JOIN " + channel_name + "\r\n";
+	ch->broadcast(c, join_msg, fds, index, nfds);
 
 	std::string names = ":ft_irc 353 " + c->nick + " = " + channel_name + " :";
 	for (size_t i = 0; i < ch->clients.size(); ++i)
@@ -407,7 +410,7 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 		iss >> target >> modes;
 		if (!iss.eof())
 			iss >> param;
-		command_MODE(c, target, modes, param, index, fds);
+		command_MODE(c, target, modes, param, index, fds, nfds);
 	}
 	else if (cmd == "PRIVMSG") {
 		if (!c->authenticated) {

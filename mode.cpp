@@ -56,7 +56,7 @@ void Server::mode_operator(Client *c, Channel *ch, char sign, const std::string 
 		ch->clients[i]->queue_send(msg, fds, index);
  }
 
-void Server::mode_invite_only(Client *c, Channel *ch, char sign, int index, struct pollfd *fds)
+void Server::mode_invite_only(Client *c, Channel *ch, char sign, int index, struct pollfd *fds, int nfds)
 {
 	if (sign == '+')
 	{
@@ -76,7 +76,12 @@ void Server::mode_invite_only(Client *c, Channel *ch, char sign, int index, stru
 	std::string msg = ":" + c->nick + " MODE " + ch->name +
 					  " " + sign + "i\r\n";
 	for (size_t i = 0; i < ch->clients.size(); i++)
-		ch->clients[i]->queue_send(msg, fds, index);
+	{
+		Client* dest = ch->clients[i];
+		int idx = find_index_in_fds(dest->fd, fds, nfds);
+		if (idx >= 0)
+			dest->queue_send(msg, fds, idx);
+	}
 }
 
 void Server::mode_topic_only(Client *c, Channel *ch, char sign, int index, struct pollfd *fds) 
@@ -162,7 +167,7 @@ void Server::mode_limit(Client *c, Channel *ch, char sign,
 
 
 void Server::command_MODE(Client *c, const std::string target, std::string mode, std::string param,
-						  int index, struct pollfd *fds)
+						  int index, struct pollfd *fds, int nfds)
 {
 	Channel *ch = check_error_mode(c, target, fds, index);
 	if (!ch)
@@ -177,7 +182,7 @@ void Server::command_MODE(Client *c, const std::string target, std::string mode,
 	if (m == 'o')
 		mode_operator(c, ch, sign, param, index, fds);
 	else if (m == 'i')
-		mode_invite_only(c, ch, sign, index, fds);
+		mode_invite_only(c, ch, sign, index, fds, nfds);
 	else if (m == 't')
 		mode_topic_only(c, ch, sign, index, fds);
 	else if (m == 'k')

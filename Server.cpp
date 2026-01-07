@@ -95,15 +95,29 @@ Channel* Server::get_channel(const std::string &name)
 	}
 	return NULL;
 }
+std::string Server::get_join_key(const std::string &line, const std::string &channel_name)
+{
+	std::string::size_type pos = line.find(channel_name);
+	if (pos == std::string::npos)
+		return "";
 
-void Server::command_JOIN(Client *c, std::string channel_name, int index, struct pollfd *fds, int nfds)
+	pos += channel_name.length();
+ 	while (pos < line.length() && line[pos] == ' ')
+        pos++;
+
+	if (pos >= line.length())
+		return "";
+	std::string key = line.substr(pos);
+	if (!key.empty() && key[0] == ':')
+        key.erase(0, 1);
+	return key;
+}
+void Server::command_JOIN(Client *c, std::string channel_name, int index, struct pollfd *fds, int nfds,
+	 const std::string &full_line)
 {
 
 	Channel* ch = get_channel(channel_name);
 
-	// std::cout << "ahahahahah" << std::endl;
-	// if (ch && ch->has_client(c))
-	// return;
 	if ( ch && ch->isInviteOnly() && !ch->isInvited(c)) 
 	{
 		std::string msg = ":ft_irc 473 " + c->nick + " " +
@@ -111,18 +125,28 @@ void Server::command_JOIN(Client *c, std::string channel_name, int index, struct
         c->queue_send(msg, fds, index);
         return;
 	}
+
 	if (!ch)
 	{
 		ch = new Channel(channel_name);
 		channels.push_back(ch);
 	}
-
-	std::cout << "avant addclient" << std::endl;
+	
+	std::cout<< "Full line = " << full_line << std::endl;
+	if (ch->has_key)
+	{
+		std::cout << "key mode activated" << std::endl;
+		std::string key_from_user = get_join_key(full_line, channel_name);
+		std::cout << "Key from user: " << std::endl;
+		std::cout << "Key enregistre dans le channel : " << ch->key;
+		if (key_from_user != ch->key)
+		{
+			send_numeric(c, "ft_irc", 475, c->nick, channel_name + " :Cannot join channel (+k)", fds, index);
+            return;
+		}
+	}
 	if (!ch->has_client(c))
 		ch->add_client(c);
-	// c->channels.push_back(ch);
-
-	//si le client est invite on le tej de la liste des invite !!! ahah
 	if (ch->isInvited(c))
 	{
 		ch->invited_clients.erase(
@@ -399,7 +423,7 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 			numeric_461(c, cmd, fds, index);
 			return;
 		}
-		command_JOIN(c, channel_name,index, fds, nfds);
+		command_JOIN(c, channel_name,index, fds, nfds, line);
 	}
 	else if (cmd == "MODE")
 	{

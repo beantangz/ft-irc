@@ -118,37 +118,39 @@ void Server::command_JOIN(Client *c, std::string channel_name, int index, struct
 	(void)full_line;
 	Channel* ch = get_channel(channel_name);
 
-	if ( ch && ch->isInviteOnly() && !ch->isInvited(c)) 
-	{
-		std::string msg = ":ft_irc 473 " + c->nick + " " +
-                      channel_name + " :Cannot join channel (+i)\r\n";
-        c->queue_send(msg, fds, index);
-        return;
-	}
-
 	if (!ch)
 	{
 		ch = new Channel(channel_name);
 		channels.push_back(ch);
 	}
-	
-	// std::cout<< "Full line = " << full_line << std::endl;
-  if (ch->has_key && key_from_user != ch->key)
-  {
-        send_numeric(c, "ft_irc", 475, c->nick,
-				channel_name + " :Cannot join channel (+k)",
-				 fds, index);
-        return;
-    }
+
+	if (ch->has_limit && (int)ch->clients.size() >= ch->user_limit) {
+		send_numeric(c, "ft_irc", 471, c->nick, channel_name + " :Cannot join channel (+l)", fds, index);
+		return;
+}
+
+	if ( ch && ch->isInviteOnly() && !ch->isInvited(c)) 
+	{
+		std::string msg = ":ft_irc 473 " + c->nick + " " + channel_name + " :Cannot join channel (+i)\r\n";
+		c->queue_send(msg, fds, index);
+		return;
+	}
+
+	if (ch->has_key && key_from_user != ch->key)
+	{
+		send_numeric(c, "ft_irc", 475, c->nick, channel_name + " :Cannot join channel (+k)", fds, index);
+		return;
+	}
+
 	if (!ch->has_client(c))
 		ch->add_client(c);
 	if (ch->isInvited(c))
 	{
 		ch->invited_clients.erase(
 			std::remove(ch->invited_clients.begin(), ch->invited_clients.end(), c),
-			ch->invited_clients.end()
-		);
+			ch->invited_clients.end());
 	}
+
 	std::string prefix = ":" + c->nick + "!" + c->user + "@" + c->host;
 	std::string join_msg = prefix + " JOIN " + channel_name + "\r\n";
 	ch->broadcast(c, join_msg, fds, index, nfds);
@@ -373,6 +375,8 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 
 	std::cout << line << std::endl << std::flush;
 
+	if (cmd == "CAP")
+		return;
 	if (cmd == "PASS") {
 		std::string pass;
 		iss >> pass;

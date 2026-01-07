@@ -59,7 +59,7 @@ public:
                           const std::string& target_nick, const std::string& reason,
                           struct pollfd* fds, int index, int nfds);
 	void command_INVITE(Client* inviter, const std::string& target_nick,
-	const std::string& channel_name, struct pollfd* fds, int index);
+	const std::string& channel_name, struct pollfd* fds, int index, int nfds);
 	void command_MODE(Client *c, std::string target, std::string mode,
 		 std::string param, int index, struct pollfd *fds, int nfds);
 	void command_NICK(Client *c, std::string &nickname, struct pollfd *fds, int index);

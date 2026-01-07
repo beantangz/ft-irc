@@ -31,6 +31,9 @@ void numeric_421(Client* c, const std::string& cmd, struct pollfd *fds, int inde
 void numeric_441(Client* c, const std::string& nick, const std::string& channel,
 				 struct pollfd *fds, int index);
 
+void numeric_443(Client* c, const std::string& nick, const std::string& channel,
+				 struct pollfd *fds, int index);
+
 void numeric_442(Client* c, const std::string& channel, struct pollfd *fds, int index);
 
 void numeric_451(Client* c, struct pollfd *fds, int index);

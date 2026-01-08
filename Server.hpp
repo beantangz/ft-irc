@@ -34,7 +34,10 @@ public:
 
 	Client* find_client_by_fd(int fd);
 	Client* find_client_by_nick(const std::string &nick);
-
+	void send_numeric_473(Client* c,
+                              const std::string& channel,
+                              struct pollfd* fds,
+                              int index);
 	// MODE fonctions
 	Channel* check_error_mode(Client *c, const std::string &target, struct pollfd *fds, int index);
 

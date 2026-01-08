@@ -112,6 +112,22 @@ std::string Server::get_join_key(const std::string &line, const std::string &cha
         key.erase(0, 1);
 	return key;
 }
+
+void Server::send_numeric_473(Client* c,
+                              const std::string& channel,
+                              struct pollfd* fds,
+                              int index)
+{
+    std::ostringstream oss;
+    oss << ":ft_irc 473 "
+        << c->nick << " "
+        << channel << " "
+        << ":Cannot join channel (+i)\r\n";
+
+    c->queue_send(oss.str(), fds, index);
+}
+
+
 void Server::command_JOIN(Client *c, std::string channel_name, int index, struct pollfd *fds, int nfds,
 	 const std::string &full_line, const std::string &key_from_user)
 {
@@ -123,9 +139,7 @@ void Server::command_JOIN(Client *c, std::string channel_name, int index, struct
 		// +i
 		if (ch->invite_only && !ch->isInvited(c))
 		{
-			send_numeric(c, "ft_irc", 473, c->nick,
-				channel_name + " :Cannot join channel (+i)",
-				fds, index);
+			send_numeric_473(c, channel_name, fds, index);
 				return;
 		}
         // +k

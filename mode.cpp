@@ -72,7 +72,8 @@ void Server::mode_operator(Client *c, Channel *ch, char sign, const std::string 
 		 numeric_472(c, "o", fds, index);
 		 return ;
 	}
-	std::string msg = ":" + c->nick + " MODE " + ch->name + " " + sign + "o " + param + "\r\n";
+	std::string prefix = ":" + c->nick + "!" + c->user + "@" + c->host;
+	std::string msg = prefix + " MODE " + ch->name + " " + sign + "o " + param + "\r\n";
 	// notifier tous les clients
 	for (size_t i = 0; i < ch->clients.size(); i++)
 		ch->clients[i]->queue_send(msg, fds, index);

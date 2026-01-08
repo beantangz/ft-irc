@@ -77,7 +77,12 @@ void numeric_403(Client* c, const std::string& channel, struct pollfd *fds, int 
 }
 
 void numeric_421(Client* c, const std::string& cmd, struct pollfd *fds, int index) {
-	send_numeric(c, "ft_irc", 421, c->nick, cmd + " :Unknown command", fds, index);
+	std::string nick;
+	if (c->nick.empty())
+		nick = "*";
+	else 
+		nick = c->nick;
+	send_numeric(c, "ft_irc", 421, nick, cmd + " :Unknown command", fds, index);
 }
 //kick
 void numeric_441(Client* c, const std::string& nick, const std::string& channel, struct pollfd *fds, int index) {

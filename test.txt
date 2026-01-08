@@ -1,2 +1,11 @@
+/connect 127.0.0.1 6666 test
 /connect 127.0.0.1 6667 test
 /connect 127.0.0.1 6667 miaou
+
+file transfer :
+
+/dcc send DestNick test.txt
+/dcc list
+/dcc get SendNick test.txt
+
+/set dcc_download_path ~/CHOOSE_PATH pour changer dossier recoit

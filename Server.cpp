@@ -225,7 +225,8 @@ void Server::command_PRIVMSG(Client *c, std::string &target, std::string &msg, s
 			numeric_401(c, target, fds, index);
 			return;
 		}
-		dest->queue_send(prefix + " PRIVMSG " + target + " :" + msg + "\r\n", fds, index);
+		int idx = find_index_in_fds(dest->fd, fds, nfds);
+		dest->queue_send(prefix + " PRIVMSG " + target + " :" + msg + "\r\n", fds, idx);
 	}
 }
 
@@ -390,7 +391,7 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 	std::string cmd;
 	iss >> cmd;
 
-	std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::toupper);
+	//std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::toupper);
 
 	std::cout << line << std::endl << std::flush;
 
@@ -492,6 +493,9 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 			numeric_412(c, fds, index);
 			return;
 		}
+		if (!msg.empty() && msg[0] == ':')
+			msg.erase(0, 1);
+
 		command_PRIVMSG(c, target, msg, fds, index, nfds);
 	}
 	else if (cmd == "PING")

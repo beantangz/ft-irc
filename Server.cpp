@@ -103,28 +103,28 @@ std::string Server::get_join_key(const std::string &line, const std::string &cha
 
 	pos += channel_name.length();
  	while (pos < line.length() && line[pos] == ' ')
-        pos++;
+		pos++;
 
 	if (pos >= line.length())
 		return "";
 	std::string key = line.substr(pos);
 	if (!key.empty() && key[0] == ':')
-        key.erase(0, 1);
+		key.erase(0, 1);
 	return key;
 }
 
 void Server::send_numeric_473(Client* c,
-                              const std::string& channel,
-                              struct pollfd* fds,
-                              int index)
+							  const std::string& channel,
+							  struct pollfd* fds,
+							  int index)
 {
-    std::ostringstream oss;
-    oss << ":ft_irc 473 "
-        << c->nick << " "
-        << channel << " "
-        << ":Cannot join channel (+i)\r\n";
+	std::ostringstream oss;
+	oss << ":ft_irc 473 "
+		<< c->nick << " "
+		<< channel << " "
+		<< ":Cannot join channel (+i)\r\n";
 
-    c->queue_send(oss.str(), fds, index);
+	c->queue_send(oss.str(), fds, index);
 }
 
 
@@ -134,21 +134,21 @@ void Server::command_JOIN(Client *c, std::string channel_name, int index, struct
 	(void)full_line;
 	Channel* ch = get_channel(channel_name);
 
-    if (ch)
-    {
+	if (ch)
+	{
 		// +i
 		if (ch->invite_only && !ch->isInvited(c))
 		{
 			send_numeric_473(c, channel_name, fds, index);
 				return;
 		}
-        // +k
+		// +k
 		if (ch->has_key && key_from_user != ch->key)
 		{
 		  send_numeric_475(c, "ft_irc", channel_name, fds, index);
-        	return;
+			return;
 		}
-    }
+	}
 	else
 	{
 		ch = new Channel(channel_name);
@@ -391,7 +391,7 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 	std::string cmd;
 	iss >> cmd;
 
-	//std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::toupper);
+	std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::toupper);
 
 	std::cout << line << std::endl << std::flush;
 
@@ -692,6 +692,24 @@ void Server::tchek_clients_out(int nfds, struct pollfd *fds) {
 	}
 }
 
+void Server::shutdown(int nfds, struct pollfd *fds)
+{
+	for (int i = 1; i < nfds; i++)
+		close(fds[i].fd);
+
+	for (size_t i = 0; i < clients.size(); i++)
+		delete clients[i];
+	clients.clear();
+
+	for (size_t i = 0; i < channels.size(); i++)
+		delete channels[i];
+	channels.clear();
+
+	close(listen_fd);
+
+	std::cout << "Server stopped cleanly\n";
+}
+
 void Server::run() {
 	struct pollfd fds[MAX_CLIENTS];
 	int nfds = 1;
@@ -699,9 +717,11 @@ void Server::run() {
 	fds[0].fd = listen_fd;
 	fds[0].events = POLLIN;
 
-	while (true) {
+	while (g_running) {
 		int ret = poll(fds, nfds, -1);
 		if (ret < 0) {
+			if (!g_running)
+				break;
 			perror("poll");
 			break;
 		}
@@ -712,4 +732,5 @@ void Server::run() {
 
 		tchek_clients_out(nfds, fds);
 	}
+	shutdown(nfds, fds);
 }

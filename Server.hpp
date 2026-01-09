@@ -3,6 +3,9 @@
 #include "irc.hpp"
 #include "Client.hpp"
 #include "Channel.hpp"
+#include <csignal>
+
+extern volatile sig_atomic_t g_running;
 
 #define MAX_CLIENTS 1024
 
@@ -35,9 +38,9 @@ public:
 	Client* find_client_by_fd(int fd);
 	Client* find_client_by_nick(const std::string &nick);
 	void send_numeric_473(Client* c,
-                              const std::string& channel,
-                              struct pollfd* fds,
-                              int index);
+							  const std::string& channel,
+							  struct pollfd* fds,
+							  int index);
 	// MODE fonctions
 	Channel* check_error_mode(Client *c, const std::string &target, struct pollfd *fds, int index);
 
@@ -56,13 +59,13 @@ public:
 	std::string get_join_key(const std::string &line, const std::string &channel_name);
 
 	void send_numeric_475(Client* c, const std::string& server_name,
-                              const std::string& channel, struct pollfd* fds, int index);
+							  const std::string& channel, struct pollfd* fds, int index);
 	//commmands
 	void command_TOPIC(Client* c, const std::string& channel_name,
-                           const std::string& new_topic,struct pollfd* fds, int index, int nfds);
+						   const std::string& new_topic,struct pollfd* fds, int index, int nfds);
 	void command_KICK(Client* kicker, const std::string& channel_name,
-                          const std::string& target_nick, const std::string& reason,
-                          struct pollfd* fds, int index, int nfds);
+						  const std::string& target_nick, const std::string& reason,
+						  struct pollfd* fds, int index, int nfds);
 	void command_INVITE(Client* inviter, const std::string& target_nick,
 	const std::string& channel_name, struct pollfd* fds, int index, int nfds);
 	void command_MODE(Client *c, std::string target, std::string mode,
@@ -70,4 +73,5 @@ public:
 	void command_NICK(Client *c, std::string &nickname, struct pollfd *fds, int index);
 	void command_JOIN(Client *c, std::string channel_name, int index, struct pollfd *fds, int nfds, const std::string &full_line, const std::string &key_from_user);
 	void command_PRIVMSG(Client *c, std::string &target, std::string &msg, struct pollfd *fds, int index, int nfds);
+	void shutdown(int nfds, struct pollfd *fds);
 };

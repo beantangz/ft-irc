@@ -1,7 +1,7 @@
 CXX = c++
 CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -MMD -MP
 
-SRC = Channel.cpp Client.cpp errors.cpp main.cpp Server.cpp mode.cpp
+SRC = Channel.cpp Client.cpp errors.cpp main.cpp Server.cpp mode.cpp Bot.cpp
 
 OBJ_DIR = obj
 OBJ = $(SRC:%.cpp=$(OBJ_DIR)/%.o)

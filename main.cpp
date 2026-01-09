@@ -19,7 +19,7 @@ int main(int ac, char **av)
 	signal(SIGINT, sigint_handler);
 
 	Server serv(std::atoi(av[1]), av[2]);
-	serv.run();
+	serv.run(std::atoi(av[1]));
 
 	return 0;
 }

@@ -4,9 +4,11 @@
 #include <cstring>
 #include <cstdio>
 #include <cerrno>
+#include <ctime>
 
 #include "Server.hpp"
 #include "errors.hpp"
+#include "Bot.hpp"
 
 #define MAX_CLIENTS 1024
 
@@ -508,8 +510,8 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 		c->queue_send("PONG :" + token + "\r\n", fds, index);
 
 	// DEBUG des channels existants
-	for (size_t i = 0; i < channels.size(); ++i)
-		channels[i]->debug_print();
+	//for (size_t i = 0; i < channels.size(); ++i)
+	//	channels[i]->debug_print();
 }
 
 	else if (cmd == "KICK")
@@ -710,15 +712,31 @@ void Server::shutdown(int nfds, struct pollfd *fds)
 	std::cout << "Server stopped cleanly\n";
 }
 
-void Server::run() {
+void Server::run(int port) {
 	struct pollfd fds[MAX_CLIENTS];
 	int nfds = 1;
 
 	fds[0].fd = listen_fd;
 	fds[0].events = POLLIN;
 
+	
+	Bot myBot("Bot42", "botuser", "127.0.0.1");
+	if (myBot.connect_to_server("127.0.0.1", port)) {
+		myBot.send_message("NICK Bot42\r\n");
+		myBot.send_message("USER botuser 0 * :Bot User\r\n");
+		std::string line = "JOIN #test";
+		handleCommand(&myBot, line, 1, fds, nfds);
+	}
+
+	fds[1].fd = myBot.fd;
+	fds[1].events = POLLIN;
+	nfds++;
+
+	time_t last_time = time(NULL);
+	const int interval = 5;
+
 	while (g_running) {
-		int ret = poll(fds, nfds, -1);
+		int ret = poll(fds, nfds, 1000);
 		if (ret < 0) {
 			if (!g_running)
 				break;
@@ -727,10 +745,19 @@ void Server::run() {
 		}
 
 		tchek_listen(nfds, fds);
-
 		tchek_clients(nfds, fds);
-
 		tchek_clients_out(nfds, fds);
+
+		time_t now = time(NULL);
+		if (now - last_time >= interval) {
+			std::string msg = "PRIVMSG #test :Clients connectes : ";
+			for (size_t i = 0; i < clients.size(); ++i) {
+				if (!clients[i]->nick.empty())
+					msg += clients[i]->nick + " ";
+			}
+			handleCommand(&myBot, msg, 1, fds, nfds);
+			last_time = now;
+		}
 	}
 	shutdown(nfds, fds);
 }

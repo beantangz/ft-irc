@@ -20,7 +20,7 @@ public:
 	Server(int port, const std::string &password = "");
 	~Server();
 
-	void	run();
+	void	run(int port);
 	void	tchek_listen(int &nfds, struct pollfd *fds);
 	void	tchek_clients(int &nfds, struct pollfd *fds);
 	void	tchek_clients_out(int nfds, struct pollfd *fds);

@@ -85,7 +85,25 @@ void Server::command_NICK(Client *c, std::string &nickname, struct pollfd *fds, 
 		}
 	}
 
+	std::string old_nick = c->nick;
 	c->nick = nickname;
+
+	// Envoyer le message NICK à tous les clients pour mettre à jour la liste des nicks
+	std::string nick_msg = ":" + old_nick + "!" + c->user + "@" + c->host + " NICK :" + c->nick + "\r\n";
+
+	for (size_t i = 0; i < clients.size(); ++i) {
+		Client* cl = clients[i];
+		// trouver l'index de fd correspondant si nécessaire
+		int client_index = -1;
+		for (int j = 0; j < MAX_CLIENTS; ++j) {
+			if (fds[j].fd == cl->fd) {
+				client_index = j;
+				break;
+			}
+		}
+		if (client_index != -1)
+			cl->queue_send(nick_msg, fds, client_index);
+	}
 }
 
 Channel* Server::get_channel(const std::string &name)
@@ -174,14 +192,17 @@ void Server::command_JOIN(Client *c, std::string channel_name, int index, struct
 
 	std::string prefix = ":" + c->nick + "!" + c->user + "@" + c->host;
 	std::string join_msg = prefix + " JOIN " + channel_name + "\r\n";
-	ch->broadcast(c, join_msg, fds, index, nfds);
+	ch->broadcast(NULL, join_msg, fds, index, nfds);
 
+	c->send_buffer.clear();
 	std::string names = ":ft_irc 353 " + c->nick + " = " + channel_name + " :";
 	for (size_t i = 0; i < ch->clients.size(); ++i)
 	{
-		if (ch->isOperator(ch->clients[i]))
+		std::cout << ch->clients[i]->nick << std::endl << std::flush;
+		Client* cl = ch->clients[i];
+		if (ch->isOperator(cl))
 			names += "@";
-		names += ch->clients[i]->nick + " ";
+		names += cl->nick + " ";
 	}
 	names += "\r\n";
 	c->queue_send(names, fds, index);
@@ -190,7 +211,6 @@ void Server::command_JOIN(Client *c, std::string channel_name, int index, struct
 				  " :End of /NAMES list.\r\n";
 	c->queue_send(end, fds, index);
 }
-
 
 
 void Server::command_PRIVMSG(Client *c, std::string &target, std::string &msg, struct pollfd *fds, int index, int nfds){

@@ -37,6 +37,7 @@ void Channel::add_client(Client *c)
 	//pour eviter les doublons de clients
 	if (std::find(clients.begin(), clients.end(), c) != clients.end())
 		return;
+
 	if (clients.empty())
 		operators.push_back(c);
 

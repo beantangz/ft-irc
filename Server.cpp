@@ -72,21 +72,39 @@ Client* Server::find_client_by_nick(const std::string &_nick){
 	return NULL;
 }
 
-void Server::command_NICK(Client *c, std::string &nickname, struct pollfd *fds, int index) {
+std::string Server::make_unique_nick(const std::string &base) {
+	if (!find_client_by_nick(base))
+		return base;
+
+	// sinon on ajoute _ puis des chiffres
+	int i = 1;
+	std::string nick;
+	std::stringstream ss;
+
+	while (true)
+	{
+		ss.str("");
+		ss.clear();
+		ss << base << "_" << i;
+		nick = ss.str();
+
+		if (!find_client_by_nick(nick))
+			return nick;
+		i++;
+	}
+}
+
+
+void Server::command_NICK(Client *c, std::string &nickname, struct pollfd *fds, int index, int nfds) {
+
 	if (nickname.empty()) {
 		numeric_431(c, fds, index);
 		return;
 	}
 
-	for (size_t i = 0; i < clients.size(); ++i) {
-		if (clients[i] != c && clients[i]->nick == nickname) {
-			numeric_433(c, nickname, fds, index);
-			return;
-		}
-	}
-
+	std::string final_nick = make_unique_nick(nickname);
 	std::string old_nick = c->nick;
-	c->nick = nickname;
+	c->nick = final_nick;
 
 	// Envoyer le message NICK à tous les clients pour mettre à jour la liste des nicks
 	std::string nick_msg = ":" + old_nick + "!" + c->user + "@" + c->host + " NICK :" + c->nick + "\r\n";
@@ -94,15 +112,9 @@ void Server::command_NICK(Client *c, std::string &nickname, struct pollfd *fds, 
 	for (size_t i = 0; i < clients.size(); ++i) {
 		Client* cl = clients[i];
 		// trouver l'index de fd correspondant si nécessaire
-		int client_index = -1;
-		for (int j = 0; j < MAX_CLIENTS; ++j) {
-			if (fds[j].fd == cl->fd) {
-				client_index = j;
-				break;
-			}
-		}
-		if (client_index != -1)
-			cl->queue_send(nick_msg, fds, client_index);
+		int idx = find_index_in_fds(cl->fd, fds, nfds);
+		if (idx >= 0)
+			cl->queue_send(nick_msg, fds, idx);
 	}
 }
 
@@ -443,7 +455,7 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 	else if (cmd == "NICK") {
 		std::string nickname;
 		iss >> nickname;
-		command_NICK(c, nickname, fds, index);
+		command_NICK(c, nickname, fds, index,nfds);
 		if (!c->user.empty()) {
 			register_client(c, fds, index);
 		}

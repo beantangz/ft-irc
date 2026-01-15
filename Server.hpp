@@ -36,6 +36,7 @@ public:
 	Channel* find_channel(const std::string &name);
 
 	Client* find_client_by_fd(int fd);
+	std::string make_unique_nick(const std::string &base);
 	Client* find_client_by_nick(const std::string &nick);
 	void send_numeric_473(Client* c,
 							  const std::string& channel,
@@ -45,7 +46,7 @@ public:
 	Channel* check_error_mode(Client *c, const std::string &target, struct pollfd *fds, int index);
 
 	void	mode_operator(Client *c, Channel *ch, char sign,
-						  const std::string &param, int index, struct pollfd *fds);
+						  const std::string &param, int index, struct pollfd *fds, int nfds);
 	void	mode_invite_only(Client *c, Channel *ch, char sign,
 							 int index, struct pollfd *fds, int nfds);
 	void	mode_topic_only(Client *c, Channel *ch, char sign,
@@ -70,7 +71,7 @@ public:
 	const std::string& channel_name, struct pollfd* fds, int index, int nfds);
 	void command_MODE(Client *c, std::string target, std::string mode,
 		 std::string param, int index, struct pollfd *fds, int nfds);
-	void command_NICK(Client *c, std::string &nickname, struct pollfd *fds, int index);
+	void command_NICK(Client *c, std::string &nickname, struct pollfd *fds, int index, int nfds);
 	void command_JOIN(Client *c, std::string channel_name, int index, struct pollfd *fds, int nfds, const std::string &full_line, const std::string &key_from_user);
 	void command_PRIVMSG(Client *c, std::string &target, std::string &msg, struct pollfd *fds, int index, int nfds);
 	void shutdown(int nfds, struct pollfd *fds);

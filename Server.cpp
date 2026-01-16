@@ -106,12 +106,10 @@ void Server::command_NICK(Client *c, std::string &nickname, struct pollfd *fds, 
 	std::string old_nick = c->nick;
 	c->nick = final_nick;
 
-	// Envoyer le message NICK à tous les clients pour mettre à jour la liste des nicks
 	std::string nick_msg = ":" + old_nick + "!" + c->user + "@" + c->host + " NICK :" + c->nick + "\r\n";
 
 	for (size_t i = 0; i < clients.size(); ++i) {
 		Client* cl = clients[i];
-		// trouver l'index de fd correspondant si nécessaire
 		int idx = find_index_in_fds(cl->fd, fds, nfds);
 		if (idx >= 0)
 			cl->queue_send(nick_msg, fds, idx);
@@ -536,8 +534,7 @@ void Server::handleCommand(Client* c,std::string& line, int index, struct pollfd
 {
 	std::string token;
 	iss >> token;
-
-	// Toujours répondre PONG d'abord
+	//PONG
 	if (!token.empty())
 		c->queue_send("PONG :" + token + "\r\n", fds, index);
 
